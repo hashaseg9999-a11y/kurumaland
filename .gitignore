@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+
+*.log
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+desktop.ini
+workspace.json
+workspace-mobile.json
