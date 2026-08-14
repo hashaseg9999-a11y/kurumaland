@@ -188,6 +188,7 @@ class LineUpActivity implements Activity {
   private readonly slots: HTMLElement[] = [];
   private readonly carButtons = new Map<string, HTMLButtonElement>();
   private readonly connected: string[] = [];
+  private readonly occupiedSlots = new Set<number>();
   private roundFinishing = false;
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
@@ -255,20 +256,20 @@ class LineUpActivity implements Activity {
       return;
     }
 
-    const slotIndex = this.nextEmptySlot();
-    if (slotIndex === -1) {
+    const expectedSlotIndex = TRAIN_CARS.findIndex((car) => car.id === drag.carId);
+    if (expectedSlotIndex === -1 || this.occupiedSlots.has(expectedSlotIndex)) {
       this.returnCar(drag, false);
       return;
     }
 
-    const slot = this.slots[slotIndex];
+    const slot = this.slots[expectedSlotIndex];
     if (!slot) {
       this.returnCar(drag, false);
       return;
     }
 
     if (this.isInsideExpandedTarget(drag, slot)) {
-      this.connectCar(drag, slot);
+      this.connectCar(drag, slot, expectedSlotIndex);
       return;
     }
 
@@ -382,6 +383,7 @@ class LineUpActivity implements Activity {
     this.carButtons.clear();
     this.slots.length = 0;
     this.connected.length = 0;
+    this.occupiedSlots.clear();
     this.root?.replaceChildren();
     this.root = null;
     this.board = null;
@@ -419,32 +421,17 @@ class LineUpActivity implements Activity {
 
     for (let index = 0; index < count; index += 1) {
       const jittered = (index + 0.5) / count;
-      positions.push(clampNumber(areaWidth * jittered + jitterNumber(areaWidth * 0.03), 40, areaWidth - 40));
+      positions.push(clampNumber(areaWidth * jittered + jitterNumber(12), 40, areaWidth - 40));
     }
 
-    TRAIN_CARS.forEach((item, index) => {
-      const button = this.carButtons.get(item.id);
-      if (!button) {
-        return;
-      }
+    positions.sort(() => Math.random() - 0.5);
+
+    this.carButtons.forEach((button, carId) => {
+      const index = TRAIN_CARS.findIndex((car) => car.id === carId);
       button.style.position = 'absolute';
       button.style.left = `${positions[index]}px`;
       button.style.transform = 'translateX(-50%)';
     });
-  }
-
-  private nextEmptySlot(): number {
-    const used = new Set(this.connected);
-    if (!used.has('red')) {
-      return 0;
-    }
-    for (let index = 1; index < TRAIN_LENGTH; index += 1) {
-      const carId = TRAIN_CARS[index]?.id;
-      if (carId && !used.has(carId)) {
-        return index;
-      }
-    }
-    return -1;
   }
 
   private isInsideExpandedTarget(drag: DragState, target: HTMLElement): boolean {
@@ -462,7 +449,7 @@ class LineUpActivity implements Activity {
     );
   }
 
-  private connectCar(drag: DragState, slot: HTMLElement): void {
+  private connectCar(drag: DragState, slot: HTMLElement, slotIndex: number): void {
     if (!this.context || !this.board) {
       return;
     }
@@ -471,6 +458,7 @@ class LineUpActivity implements Activity {
     drag.button.classList.add('is-connected');
     drag.button.dataset.connected = 'true';
     slot.classList.add('is-connected');
+    this.occupiedSlots.add(slotIndex);
     this.connected.push(drag.carId);
 
     const originalRect = drag.button.getBoundingClientRect();
@@ -500,7 +488,7 @@ class LineUpActivity implements Activity {
     this.context.speech.speak(drag.carId === 'red' ? 'fireTruck' : 'car');
     this.sparkleAt(slot);
 
-    if (this.connected.length === TRAIN_LENGTH) {
+    if (this.occupiedSlots.size === TRAIN_LENGTH) {
       this.schedule(() => this.finishTrain(), 520);
     }
   }
@@ -551,6 +539,7 @@ class LineUpActivity implements Activity {
   private startNewRound(): void {
     this.roundFinishing = false;
     this.connected.length = 0;
+    this.occupiedSlots.clear();
 
     for (const button of this.carButtons.values()) {
       button.dataset.connected = '';

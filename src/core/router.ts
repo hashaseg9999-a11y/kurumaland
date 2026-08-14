@@ -199,14 +199,9 @@ export class ActivityRouter {
     scene.append(garage, ...returningCars);
     screen.append(background, scene);
 
-    screen.addEventListener('click', () => {
-      this.showMenu();
-    });
-
     this.root.append(screen);
     this.speech.speak('wellDone');
     this.sfx.play('applause');
-    this.onTaskComplete();
   };
 
   private openActivity(activity: Activity): void {
@@ -252,7 +247,7 @@ export class ActivityRouter {
         this.showMenu();
       },
       notifyTaskComplete: () => {
-        this.showEnding();
+        this.onTaskComplete();
       },
     });
 

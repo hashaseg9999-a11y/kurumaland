@@ -466,3 +466,203 @@ img {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Orientation Overlay for Portrait Mode */
+.orientation-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: none;
+  place-content: center;
+  place-items: center;
+  gap: 28px;
+  background: #eaf8ff;
+  text-align: center;
+}
+
+.orientation-picture {
+  position: relative;
+  width: 210px;
+  height: 150px;
+}
+
+.tablet-shape {
+  position: absolute;
+  top: 36px;
+  left: 28px;
+  width: 128px;
+  height: 88px;
+  border: 12px solid #356b91;
+  border-radius: 18px;
+  background: #ffffff;
+  transform: rotate(-12deg);
+}
+
+.rotate-arrow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: #ff8b54;
+  font-size: 92px;
+  line-height: 1;
+}
+
+.orientation-overlay p {
+  margin: 0;
+  font-size: clamp(34px, 8vw, 54px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #15334a;
+}
+
+@media (orientation: portrait) {
+  .orientation-overlay {
+    display: grid;
+  }
+}
+
+/* Ending Screen and Scene Styles */
+.ending-screen {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  background: #dff4ff;
+  pointer-events: none;
+}
+
+.ending-scene,
+.ending-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ending-background {
+  object-fit: cover;
+  opacity: 0.72;
+}
+
+.ending-garage {
+  position: absolute;
+  z-index: 3;
+  right: 7vw;
+  bottom: 8vh;
+  width: min(30vw, 380px);
+  height: auto;
+}
+
+.ending-returning-car {
+  position: absolute;
+  z-index: 2;
+  bottom: 13vh;
+  left: -24vw;
+  width: min(22vw, 280px);
+  height: auto;
+  animation: ending-car-home 2.4s ease-in forwards;
+}
+
+.ending-returning-car-2 {
+  bottom: 23vh;
+  width: min(18vw, 230px);
+  animation-delay: 280ms;
+}
+
+.ending-returning-car-3 {
+  bottom: 34vh;
+  width: min(15vw, 190px);
+  animation-delay: 560ms;
+}
+
+.ending-resting {
+  position: absolute;
+  z-index: 4;
+  right: 14vw;
+  bottom: 12vh;
+  width: min(20vw, 250px);
+  opacity: 0;
+  animation: ending-rest 600ms ease-out 2.5s forwards;
+}
+
+.ending-resting img {
+  width: 100%;
+  filter: saturate(0.82) brightness(0.96);
+}
+
+.ending-resting span {
+  position: absolute;
+  top: -36px;
+  right: 4px;
+  color: #356b91;
+  font-size: clamp(30px, 5vw, 54px);
+  font-weight: 800;
+  transform: rotate(-8deg);
+}
+
+.ending-screen h1 {
+  position: relative;
+  z-index: 5;
+  margin: 0 0 18vh;
+  padding: 20px 46px;
+  border-radius: 30px;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 12px 28px rgb(21 51 74 / 14%);
+  font-size: clamp(46px, 8vw, 86px);
+  letter-spacing: 0.08em;
+  opacity: 0;
+  animation: ending-message 600ms ease-out 2.5s forwards;
+}
+
+@keyframes ending-car-home {
+  0% {
+    transform: translateX(0);
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(112vw) scale(0.72);
+  }
+}
+
+@keyframes ending-rest {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ending-message {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ending-returning-car {
+    display: none;
+  }
+
+  .ending-resting,
+  .ending-screen h1 {
+    opacity: 1;
+    animation: none;
+  }
+}
