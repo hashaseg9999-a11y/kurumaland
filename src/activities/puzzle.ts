@@ -1,9 +1,10 @@
-import carBlue from '../assets/car_blue.webp';
-import carGreen from '../assets/car_green.webp';
-import carRed from '../assets/car_red.webp';
-import carYellow from '../assets/car_yellow.webp';
-import menuIcon from '../assets/menu_puzzle.webp';
+import carBlue from '../assets/car_blue.svg';
+import carGreen from '../assets/car_green.svg';
+import carRed from '../assets/car_red.svg';
+import carYellow from '../assets/car_yellow.svg';
+import menuIcon from '../assets/menu_puzzle.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
 type Difficulty = 2 | 3 | 4;
 type CarVocabKey = 'redCar' | 'blueCar' | 'yellowCar' | 'greenCar';
@@ -74,6 +75,7 @@ class PuzzleActivity implements Activity {
   private loadingImage: HTMLImageElement | null = null;
   private readonly timers = new Set<number>();
   private readonly animations = new Set<Animation>();
+  private particles: ParticleSystem | null = null;
   private pieces: PuzzlePiece[] = [];
   private targetRect: TargetRect | null = null;
   private activePointerId: number | null = null;
@@ -270,6 +272,7 @@ class PuzzleActivity implements Activity {
     context.root.replaceChildren(wrapper);
     this.wrapper = wrapper;
     this.board = board;
+    this.particles = new ParticleSystem(wrapper);
 
     const listenerOptions = { signal: this.abortController.signal };
     board.addEventListener('pointerdown', this.handlePointerDown, listenerOptions);
@@ -295,6 +298,9 @@ class PuzzleActivity implements Activity {
       animation.cancel();
     }
     this.animations.clear();
+
+    this.particles?.destroy();
+    this.particles = null;
 
     if (this.activePointerId !== null) {
       this.releaseActivePointer(this.activePointerId);
@@ -700,6 +706,8 @@ class PuzzleActivity implements Activity {
     this.context.speech.speak(vehicle.vocab);
     this.context.notifyTaskComplete();
 
+    this.starsAtTarget();
+
     this.completionsAtDifficulty += 1;
     if (this.difficulty === 2 && this.completionsAtDifficulty >= 3) {
       this.difficulty = 3;
@@ -762,6 +770,23 @@ class PuzzleActivity implements Activity {
       this.roundNumber += 1;
       this.startRound();
     }, 2_020);
+  }
+
+  private starsAtTarget(): void {
+    if (!this.particles || !this.targetRect || !this.wrapper || !this.board) {
+      return;
+    }
+
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+    const boardRect = this.board.getBoundingClientRect();
+    const offsetLeft = boardRect.left - wrapperRect.left + this.targetRect.x;
+    const offsetTop = boardRect.top - wrapperRect.top + this.targetRect.y;
+    this.particles.emitStars(
+      offsetLeft + this.targetRect.width / 2,
+      offsetTop + this.targetRect.height / 2,
+      14,
+      ['#ffd740', '#ff5252', '#448aff', '#69f0ae', '#ab47bc'],
+    );
   }
 
   private setRect(element: HTMLElement, rect: TargetRect): void {

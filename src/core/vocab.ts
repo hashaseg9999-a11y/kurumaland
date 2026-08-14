@@ -37,6 +37,13 @@ export const VOCAB = {
   // 静かなほめことば（全アクティビティ共通）
   wellDone: { ja: 'よくできました', en: 'well done', th: 'เก่งมาก' },
   goodJob: { ja: 'じょうずに できたね', en: 'good job', th: 'ทำได้ดีมาก' },
+
+  // 音・光あそび（A7）
+  siren: { ja: 'ぴーぽぴーぽ', en: 'wee-woo', th: 'หวอ หวอ' },
+  hornSound: { ja: 'ぷっぷー', en: 'beep beep', th: 'ป๊บ ป๊บ' },
+  headlight: { ja: 'ひかり', en: 'lights', th: 'ไฟหน้า' },
+  hazard: { ja: 'ぴかぴか', en: 'blink blink', th: 'กระพริบ' },
+  ladder: { ja: 'はしご', en: 'ladder', th: 'บันได' },
 } as const;
 
 export type VocabKey = keyof typeof VOCAB;

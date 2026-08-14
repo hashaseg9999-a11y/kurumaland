@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 135" width="280" height="189">
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Red Emergency Siren Light Glow -->
+    <circle cx="130" cy="14" r="12" fill="#FF3B30" opacity="0.35"/>
+    <path d="M 124 20 L 124 13 Q 130 7 136 13 L 136 20 Z" fill="#FF0000" stroke="#15334A" stroke-width="2.5"/>
+    <rect x="122" y="20" width="16" height="5" rx="1.5" fill="#FFCC00" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Ladder on Roof -->
+    <rect x="35" y="14" width="78" height="8" rx="3" fill="#FFD166" stroke="#15334A" stroke-width="2.5"/>
+    <line x1="48" y1="14" x2="48" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="61" y1="14" x2="61" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="74" y1="14" x2="74" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="87" y1="14" x2="87" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="100" y1="14" x2="100" y2="22" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Fire Engine Sculpted Main Body -->
+    <!-- Rear Cabin & Cargo Body -->
+    <path d="M 22 36 C 22 28 28 22 36 22 L 115 22 L 115 92 L 22 92 Z" fill="#E63946" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    
+    <!-- Front Cabin Hood & Sloped Windshield -->
+    <path d="M 112 22 L 140 22 C 152 22 165 30 172 45 L 178 60 C 182 68 182 92 172 92 L 112 92 Z" fill="#EE2B3B" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- White Side Stripe -->
+    <path d="M 22 56 L 178 56 L 178 66 L 22 66 Z" fill="#FFFFFF"/>
+    <line x1="22" y1="56" x2="178" y2="56" stroke="#15334A" stroke-width="2"/>
+    <line x1="22" y1="66" x2="178" y2="66" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Silver Shutter Equipment Door -->
+    <rect x="32" y="30" width="50" height="23" rx="3" fill="#D8E2DC" stroke="#15334A" stroke-width="2.5"/>
+    <line x1="32" y1="36" x2="82" y2="36" stroke="#9A9EAB" stroke-width="1.5"/>
+    <line x1="32" y1="41" x2="82" y2="41" stroke="#9A9EAB" stroke-width="1.5"/>
+    <line x1="32" y1="47" x2="82" y2="47" stroke="#9A9EAB" stroke-width="1.5"/>
+
+    <!-- Hose Reel Indicator -->
+    <circle cx="68" cy="78" r="8" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
+    <circle cx="68" cy="78" r="3" fill="#E63946"/>
+
+    <!-- Large Front Cabin Windshield Window -->
+    <path d="M 115 28 L 138 28 C 145 28 152 34 156 42 L 158 50 L 115 50 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <!-- Eye Outer White -->
+    <ellipse cx="140" cy="39" rx="9" ry="11" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <!-- Eye Pupil (Dark Navy Blue) -->
+    <ellipse cx="142" cy="39" rx="5.5" ry="7" fill="#152B3C"/>
+    <!-- Large White Sparkle 1 -->
+    <circle cx="140" cy="35" r="2.8" fill="#FFFFFF"/>
+    <!-- Small White Sparkle 2 -->
+    <circle cx="144" cy="42" r="1.3" fill="#FFFFFF"/>
+    <!-- Friendly Brow -->
+    <path d="M 130 25 Q 140 21 150 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Window Glare Highlight -->
+    <path d="M 118 31 L 130 31" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+
+    
+
+    <!-- Front Bumper & Friendly Smile -->
+    <path d="M 175 70 Q 183 70 183 80 Q 183 88 172 88" fill="#CED4DA" stroke="#15334A" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M 158 76 Q 164 83 170 76" fill="none" stroke="#15334A" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Cute Big Headlight -->
+    <circle cx="174" cy="58" r="7" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+    <circle cx="176" cy="56" r="2.5" fill="#FFFFFF"/>
+
+    <!-- Rear Taillight -->
+    <rect x="17" y="62" width="7" height="16" rx="3" fill="#FF0000" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="50" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="50" cy="94" r="9" fill="#E9ECEF" stroke="#15334A" stroke-width="2"/>
+    <circle cx="50" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E9ECEF" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+</svg>

@@ -1,0 +1,244 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" width="220" height="140">
+  <g transform="translate(5, 5)">
+    <!-- Ground -->
+    <rect x="10" y="96" width="200" height="26" rx="8" fill="#8BC34A" stroke="#15334A" stroke-width="3"/>
+    <!-- Track Line -->
+    <line x1="24" y1="112" x2="196" y2="112" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <!-- Linked Train of Vehicles -->
+    <g transform="translate(8, 30) scale(0.42)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Red Emergency Siren Light Glow -->
+    <circle cx="130" cy="14" r="12" fill="#FF3B30" opacity="0.35"/>
+    <path d="M 124 20 L 124 13 Q 130 7 136 13 L 136 20 Z" fill="#FF0000" stroke="#15334A" stroke-width="2.5"/>
+    <rect x="122" y="20" width="16" height="5" rx="1.5" fill="#FFCC00" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Ladder on Roof -->
+    <rect x="35" y="14" width="78" height="8" rx="3" fill="#FFD166" stroke="#15334A" stroke-width="2.5"/>
+    <line x1="48" y1="14" x2="48" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="61" y1="14" x2="61" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="74" y1="14" x2="74" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="87" y1="14" x2="87" y2="22" stroke="#15334A" stroke-width="2"/>
+    <line x1="100" y1="14" x2="100" y2="22" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Fire Engine Sculpted Main Body -->
+    <!-- Rear Cabin & Cargo Body -->
+    <path d="M 22 36 C 22 28 28 22 36 22 L 115 22 L 115 92 L 22 92 Z" fill="#E63946" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    
+    <!-- Front Cabin Hood & Sloped Windshield -->
+    <path d="M 112 22 L 140 22 C 152 22 165 30 172 45 L 178 60 C 182 68 182 92 172 92 L 112 92 Z" fill="#EE2B3B" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- White Side Stripe -->
+    <path d="M 22 56 L 178 56 L 178 66 L 22 66 Z" fill="#FFFFFF"/>
+    <line x1="22" y1="56" x2="178" y2="56" stroke="#15334A" stroke-width="2"/>
+    <line x1="22" y1="66" x2="178" y2="66" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Silver Shutter Equipment Door -->
+    <rect x="32" y="30" width="50" height="23" rx="3" fill="#D8E2DC" stroke="#15334A" stroke-width="2.5"/>
+    <line x1="32" y1="36" x2="82" y2="36" stroke="#9A9EAB" stroke-width="1.5"/>
+    <line x1="32" y1="41" x2="82" y2="41" stroke="#9A9EAB" stroke-width="1.5"/>
+    <line x1="32" y1="47" x2="82" y2="47" stroke="#9A9EAB" stroke-width="1.5"/>
+
+    <!-- Hose Reel Indicator -->
+    <circle cx="68" cy="78" r="8" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
+    <circle cx="68" cy="78" r="3" fill="#E63946"/>
+
+    <!-- Large Front Cabin Windshield Window -->
+    <path d="M 115 28 L 138 28 C 145 28 152 34 156 42 L 158 50 L 115 50 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <!-- Eye Outer White -->
+    <ellipse cx="140" cy="39" rx="9" ry="11" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <!-- Eye Pupil (Dark Navy Blue) -->
+    <ellipse cx="142" cy="39" rx="5.5" ry="7" fill="#152B3C"/>
+    <!-- Large White Sparkle 1 -->
+    <circle cx="140" cy="35" r="2.8" fill="#FFFFFF"/>
+    <!-- Small White Sparkle 2 -->
+    <circle cx="144" cy="42" r="1.3" fill="#FFFFFF"/>
+    <!-- Friendly Brow -->
+    <path d="M 130 25 Q 140 21 150 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Window Glare Highlight -->
+    <path d="M 118 31 L 130 31" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+
+    
+
+    <!-- Front Bumper & Friendly Smile -->
+    <path d="M 175 70 Q 183 70 183 80 Q 183 88 172 88" fill="#CED4DA" stroke="#15334A" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M 158 76 Q 164 83 170 76" fill="none" stroke="#15334A" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Cute Big Headlight -->
+    <circle cx="174" cy="58" r="7" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+    <circle cx="176" cy="56" r="2.5" fill="#FFFFFF"/>
+
+    <!-- Rear Taillight -->
+    <rect x="17" y="62" width="7" height="16" rx="3" fill="#FF0000" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="50" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="50" cy="94" r="9" fill="#E9ECEF" stroke="#15334A" stroke-width="2"/>
+    <circle cx="50" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E9ECEF" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+    <g transform="translate(58, 30) scale(0.42)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Red V-Siren Bar Glow -->
+    <circle cx="105" cy="12" r="14" fill="#FF2D55" opacity="0.3"/>
+    <!-- V-Siren Bar Body -->
+    <path d="M 90 16 L 118 16 L 123 23 L 85 23 Z" fill="#FF2D55" stroke="#15334A" stroke-width="2.5"/>
+    <rect x="98" y="23" width="12" height="5" fill="#CED4DA" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Police Car Roof Curve (White) -->
+    <path d="M 48 42 L 65 24 L 135 24 C 150 24 160 33 166 42 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- Lower Body Base (Black) -->
+    <path d="M 22 42 C 22 42 22 92 36 92 L 180 92 C 188 92 188 72 186 60 C 184 50 174 42 166 42 Z" fill="#1A1A1E" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    
+    <!-- White Top Body Wrap -->
+    <path d="M 22 44 L 182 44 L 182 60 Q 100 62 22 60 Z" fill="#FFFFFF"/>
+    <line x1="22" y1="60" x2="182" y2="60" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Rear Window & Front Windshield -->
+    <rect x="62" y="28" width="32" height="16" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 98 28 L 132 28 C 140 28 146 32 150 40 L 152 44 L 98 44 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <ellipse cx="128" cy="36" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <ellipse cx="130" cy="36" rx="5" ry="6.5" fill="#152B3C"/>
+    <circle cx="128" cy="32" r="2.6" fill="#FFFFFF"/>
+    <circle cx="132" cy="39" r="1.2" fill="#FFFFFF"/>
+    <path d="M 118 22 Q 128 18 138 23" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Gold Police Star Badge Emblem on Side Door -->
+    <polygon points="98,66 100,72 106,72 101,76 103,82 98,78 93,82 95,76 90,72 96,72" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Front Bumper & Friendly Smile -->
+    <path d="M 162 76 Q 168 82 174 76" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Cute Big Headlight -->
+    <circle cx="178" cy="55" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+    <circle cx="179" cy="53" r="2.2" fill="#FFFFFF"/>
+
+    <!-- Rear Taillight -->
+    <rect x="17" y="52" width="7" height="14" rx="3" fill="#FF3B30" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="50" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="50" cy="94" r="9" fill="#E2E8F0" stroke="#15334A" stroke-width="2"/>
+    <circle cx="50" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E2E8F0" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+    <g transform="translate(108, 30) scale(0.42)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Yellow Beacon Light -->
+    <rect x="135" y="16" width="12" height="9" rx="2.5" fill="#FF9F1C" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Large Tilted Dump Cargo Bed -->
+    <path d="M 22 28 L 110 28 L 110 74 L 22 74 Z" fill="#FB8500" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    <line x1="50" y1="28" x2="50" y2="74" stroke="#15334A" stroke-width="2.5"/>
+    <line x1="80" y1="28" x2="80" y2="74" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Front Heavy Duty Yellow Cabin -->
+    <path d="M 112 25 L 155 25 C 166 25 174 33 177 46 L 180 74 L 112 74 Z" fill="#FFB703" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    
+    <!-- Cabin Window -->
+    <path d="M 120 31 L 152 31 C 158 31 162 36 164 45 L 165 52 L 120 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <ellipse cx="142" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <ellipse cx="144" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
+    <circle cx="142" cy="37" r="2.6" fill="#FFFFFF"/>
+    <circle cx="146" cy="44" r="1.2" fill="#FFFFFF"/>
+    <path d="M 132 26 Q 142 22 152 27" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Hazard Safety Bumper Stripes -->
+    <rect x="22" y="74" width="158" height="16" fill="#333333" stroke="#15334A" stroke-width="3"/>
+    <path d="M 32 74 L 44 90 M 56 74 L 68 90 M 80 74 L 92 90 M 104 74 L 116 90 M 128 74 L 140 90 M 152 74 L 164 90" stroke="#FFB703" stroke-width="4.5"/>
+
+    <!-- Headlight -->
+    <circle cx="178" cy="60" r="6.5" fill="#FFFFFF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Dual Heavy Wheels (Back) -->
+    <circle cx="48" cy="94" r="21" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="48" cy="94" r="9" fill="#FFB703" stroke="#15334A" stroke-width="2"/>
+    <circle cx="48" cy="94" r="3.5" fill="#15334A"/>
+
+    <circle cx="90" cy="94" r="21" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="90" cy="94" r="9" fill="#FFB703" stroke="#15334A" stroke-width="2"/>
+    <circle cx="90" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Heavy Wheel (Front) -->
+    <circle cx="152" cy="94" r="21" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="152" cy="94" r="9" fill="#FFB703" stroke="#15334A" stroke-width="2"/>
+    <circle cx="152" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+    <g transform="translate(158, 30) scale(0.42)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Roof Beacon Light -->
+    <rect x="130" y="16" width="12" height="9" rx="2.5" fill="#52B788" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Rear Green Container -->
+    <rect x="22" y="26" width="85" height="66" rx="10" fill="#2A9D8F" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="64" cy="56" r="16" fill="#E9C46A" opacity="0.95" stroke="#15334A" stroke-width="2"/>
+    <!-- Leaf Icon Motif -->
+    <path d="M 64 45 Q 75 51 70 65 Q 55 67 64 45 Z" fill="#2A9D8F"/>
+
+    <!-- Green Cabin Front -->
+    <path d="M 108 24 L 152 24 C 162 24 170 32 174 44 L 176 92 L 108 92 Z" fill="#52B788" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- Cabin Window -->
+    <path d="M 116 30 L 148 30 C 154 30 158 35 160 44 L 161 52 L 116 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <ellipse cx="138" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <ellipse cx="140" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
+    <circle cx="138" cy="37" r="2.6" fill="#FFFFFF"/>
+    <circle cx="142" cy="44" r="1.2" fill="#FFFFFF"/>
+    <path d="M 128 25 Q 138 21 148 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Headlight -->
+    <circle cx="174" cy="62" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="52" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="52" cy="94" r="9" fill="#E9C46A" stroke="#15334A" stroke-width="2"/>
+    <circle cx="52" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E9C46A" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+  </g>
+</svg>

@@ -1,13 +1,14 @@
-import carBlue from '../assets/car_blue.webp';
-import carGreen from '../assets/car_green.webp';
-import carRed from '../assets/car_red.webp';
-import carYellow from '../assets/car_yellow.webp';
-import garageBlue from '../assets/garage_blue.webp';
-import garageGreen from '../assets/garage_green.webp';
-import garageRed from '../assets/garage_red.webp';
-import garageYellow from '../assets/garage_yellow.webp';
-import menuIcon from '../assets/menu_trace.webp';
+import carBlue from '../assets/car_blue.svg';
+import carGreen from '../assets/car_green.svg';
+import carRed from '../assets/car_red.svg';
+import carYellow from '../assets/car_yellow.svg';
+import garageBlue from '../assets/garage_blue.svg';
+import garageGreen from '../assets/garage_green.svg';
+import garageRed from '../assets/garage_red.svg';
+import garageYellow from '../assets/garage_yellow.svg';
+import menuIcon from '../assets/menu_trace.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const VIEWBOX_WIDTH = 1_000;
@@ -68,6 +69,7 @@ class TraceActivity implements Activity {
   private abortController: AbortController | null = null;
   private readonly timers = new Set<number>();
   private readonly animations = new Set<Animation>();
+  private particles: ParticleSystem | null = null;
   private samples: PathSample[] = [];
   private totalLength = 0;
   private progressLength = 0;
@@ -218,6 +220,7 @@ class TraceActivity implements Activity {
     context.root.replaceChildren(wrapper);
     this.wrapper = wrapper;
     this.svg = svg;
+    this.particles = new ParticleSystem(wrapper);
 
     const listenerOptions = { signal: this.abortController.signal };
     svg.addEventListener('pointerdown', this.handlePointerDown, listenerOptions);
@@ -242,6 +245,9 @@ class TraceActivity implements Activity {
       animation.cancel();
     }
     this.animations.clear();
+
+    this.particles?.destroy();
+    this.particles = null;
 
     if (this.svg && this.activePointerId !== null) {
       this.releasePointer(this.activePointerId);
@@ -425,6 +431,8 @@ class TraceActivity implements Activity {
     this.context.speech.speak('arrived');
     this.context.notifyTaskComplete();
 
+    this.starsAtGoal();
+
     const garageAnimation = this.carGroup.animate(
       [
         { opacity: 1 },
@@ -455,6 +463,28 @@ class TraceActivity implements Activity {
       }
       this.renderCourse();
     }, completedSet ? 1_720 : 1_220);
+  }
+
+  private starsAtGoal(): void {
+    if (!this.particles || !this.pathElement || !this.wrapper) {
+      return;
+    }
+
+    const point = this.pathElement.getPointAtLength(this.totalLength);
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+    const svgRect = this.svg?.getBoundingClientRect();
+    if (!svgRect) {
+      return;
+    }
+
+    const scaleX = svgRect.width / VIEWBOX_WIDTH;
+    const scaleY = svgRect.height / VIEWBOX_HEIGHT;
+    this.particles.emitStars(
+      svgRect.left - wrapperRect.left + point.x * scaleX,
+      svgRect.top - wrapperRect.top + point.y * scaleY,
+      12,
+      ['#ffd740', '#ff5252', '#448aff', '#69f0ae'],
+    );
   }
 
   private pointAtProgress(): Point | null {

@@ -1,16 +1,21 @@
-import carClean from '../assets/car_red.webp';
-import carDirty from '../assets/car_dirty.webp';
-import menuIcon from '../assets/menu_car-wash.webp';
-import washFoam from '../assets/wash_foam.webp';
-import washSponge from '../assets/wash_sponge.webp';
-import washTowel from '../assets/wash_towel.webp';
+import backgroundCarWash from '../assets/bg_car_wash.webp';
+import carClean from '../assets/car_red.svg';
+import carDirty from '../assets/car_dirty.svg';
+import menuIcon from '../assets/menu_car-wash.svg';
+import washFoam from '../assets/wash_foam.svg';
+import washSponge from '../assets/wash_sponge.svg';
+import washHose from '../assets/wash_hose.svg';
+import washTowel from '../assets/wash_towel.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
-const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
-const REQUIRED_COVERAGE = 0.7;
-const BRUSH_RADIUS = 70;
+const REQUIRED_COVERAGE = 0.68;
+const BRUSH_RADIUS = 82;
+const MAX_PIXEL_RATIO = 2;
+const TOOL_POINTER_OFFSET = 46;
 
 type WashStep = 0 | 1 | 2;
 
@@ -20,53 +25,183 @@ interface Point {
 }
 
 const TOOL_LABELS = ['スポンジ', 'ホース', 'タオル'] as const;
+const TOOL_VOCAB = ['sponge', 'water', 'towel'] as const;
 
-function makeCoveragePoints(): readonly Point[] {
-  const points: Point[] = [];
-  const columns = 14;
-  const rows = 7;
+const WASH_STYLES = `
+  .kl-wash {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #dff4ff;
+    touch-action: none;
+  }
 
-  for (let row = 0; row < rows; row += 1) {
-    for (let column = 0; column < columns; column += 1) {
-      points.push({
-        x: 105 + (590 * column) / (columns - 1),
-        y: 205 + (230 * row) / (rows - 1),
-      });
+  .kl-wash__background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .kl-wash__bay {
+    position: absolute;
+    z-index: 2;
+    top: clamp(46px, 7vh, 82px);
+    left: 50%;
+    width: min(62vw, 660px);
+    aspect-ratio: 4 / 3;
+    transform: translateX(-50%);
+    touch-action: none;
+  }
+
+  .kl-wash__visual,
+  .kl-wash__car,
+  .kl-wash__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .kl-wash__visual {
+    filter: drop-shadow(0 15px 12px rgb(43 68 81 / 18%));
+    transform: translateX(0);
+  }
+
+  .kl-wash__car {
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  .kl-wash__dirt-fallback {
+    opacity: 1;
+    transition: opacity 120ms ease-out;
+  }
+
+  .kl-wash__canvas {
+    pointer-events: none;
+  }
+
+  .kl-wash__tray {
+    position: absolute;
+    z-index: 4;
+    right: max(24px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: max(116px, calc(env(safe-area-inset-left) + 108px));
+    display: flex;
+    height: clamp(126px, 21vh, 168px);
+    align-items: center;
+    justify-content: center;
+    gap: clamp(32px, 7vw, 86px);
+    border: 4px solid rgb(57 89 107 / 10%);
+    border-radius: 38px;
+    background: rgb(255 255 255 / 91%);
+    box-shadow: 0 16px 32px rgb(44 79 99 / 16%);
+  }
+
+  .kl-wash__tool {
+    display: grid;
+    width: clamp(102px, 14vh, 134px);
+    height: clamp(102px, 14vh, 134px);
+    min-width: 88px;
+    min-height: 88px;
+    padding: 10px;
+    place-items: center;
+    border: 4px solid transparent;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 92%);
+    cursor: pointer;
+    opacity: 0.52;
+    transform: scale(0.94);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .kl-wash__tool.is-active {
+    border-color: #ffd15c;
+    box-shadow:
+      0 0 0 9px rgb(255 221 105 / 28%),
+      0 10px 22px rgb(45 82 102 / 17%);
+    cursor: grab;
+    opacity: 1;
+    transform: scale(1.06);
+    animation: kl-wash-tool-pulse 2.4s ease-in-out infinite;
+  }
+
+  .kl-wash__tool img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .kl-wash__floating {
+    position: absolute;
+    z-index: 8;
+    display: none;
+    width: 112px;
+    height: 112px;
+    place-items: center;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .kl-wash__floating.is-visible {
+    display: grid;
+  }
+
+  .kl-wash__floating img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 9px 8px rgb(27 62 83 / 24%));
+  }
+
+  @keyframes kl-wash-tool-pulse {
+    0%,
+    100% {
+      transform: scale(1.04);
+    }
+
+    50% {
+      transform: scale(1.09);
     }
   }
 
-  return points;
-}
+  @media (max-height: 650px) and (orientation: landscape) {
+    .kl-wash__bay {
+      top: 38px;
+      width: min(55vw, 560px);
+    }
 
-const COVERAGE_POINTS = makeCoveragePoints();
+    .kl-wash__tray {
+      height: 114px;
+      gap: clamp(22px, 5vw, 56px);
+    }
 
-function createHoseIcon(): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NAMESPACE, 'svg');
-  svg.setAttribute('viewBox', '0 0 100 100');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.classList.add('kl-wash__hose-icon');
+    .kl-wash__tool {
+      width: 94px;
+      height: 94px;
+    }
+  }
 
-  const coil = document.createElementNS(SVG_NAMESPACE, 'path');
-  coil.setAttribute('d', 'M28 67 C8 48 23 18 50 25 C79 32 77 67 54 72 C37 76 29 64 38 53');
-  coil.setAttribute('fill', 'none');
-  coil.setAttribute('stroke', '#3997c9');
-  coil.setAttribute('stroke-width', '10');
-  coil.setAttribute('stroke-linecap', 'round');
+  @media (prefers-reduced-motion: reduce) {
+    .kl-wash__dirt-fallback,
+    .kl-wash__tool {
+      transition: none;
+    }
 
-  const nozzle = document.createElementNS(SVG_NAMESPACE, 'path');
-  nozzle.setAttribute('d', 'M55 47 L84 20 L92 30 L64 57 Z');
-  nozzle.setAttribute('fill', '#ffd15c');
-  nozzle.setAttribute('stroke', '#4c5960');
-  nozzle.setAttribute('stroke-width', '5');
-  nozzle.setAttribute('stroke-linejoin', 'round');
+    .kl-wash__tool.is-active {
+      animation: none;
+    }
+  }
+`;
 
-  const drop = document.createElementNS(SVG_NAMESPACE, 'path');
-  drop.setAttribute('d', 'M83 47 C76 58 75 62 75 67 A9 9 0 0 0 93 67 C93 62 90 56 83 47Z');
-  drop.setAttribute('fill', '#65cfff');
 
-  svg.append(coil, nozzle, drop);
-  return svg;
-}
 
 class CarWashActivity implements Activity {
   readonly id = 'car-wash';
@@ -76,24 +211,50 @@ class CarWashActivity implements Activity {
   private wrapper: HTMLDivElement | null = null;
   private carZone: HTMLDivElement | null = null;
   private carVisual: HTMLDivElement | null = null;
-  private dirtyCar: HTMLImageElement | null = null;
+  private dirtyFallback: HTMLImageElement | null = null;
+  private dirtCanvas: HTMLCanvasElement | null = null;
   private foamCanvas: HTMLCanvasElement | null = null;
   private effectCanvas: HTMLCanvasElement | null = null;
+  private maskCanvas: HTMLCanvasElement | null = null;
+  private maskData: ImageData | null = null;
   private floatingTool: HTMLDivElement | null = null;
-  private stars: HTMLDivElement | null = null;
+  private cleanTexture: HTMLImageElement | null = null;
+  private dirtyTexture: HTMLImageElement | null = null;
   private foamTexture: HTMLImageElement | null = null;
   private toolButtons: HTMLButtonElement[] = [];
+  private coveragePoints: Point[] = [];
   private abortController: AbortController | null = null;
   private readonly timers = new Set<number>();
   private readonly animations = new Set<Animation>();
+  private particles: ParticleSystem | null = null;
   private step: WashStep = 0;
   private coverage = new Set<number>();
   private activePointerId: number | null = null;
-  private activeToolButton: HTMLButtonElement | null = null;
+  private pointerCaptureOwner: HTMLElement | null = null;
   private lastStrokePoint: Point | null = null;
+  private lastFoamStampPoint: Point | null = null;
   private lastSoundAt = 0;
-  private waterSpoken = false;
   private completing = false;
+  private layersReady = false;
+  private pixelRatio = 1;
+
+  private readonly handleBayPointerDown = (event: PointerEvent): void => {
+    if (
+      event.button !== 0 ||
+      this.completing ||
+      this.activePointerId !== null
+    ) {
+      return;
+    }
+
+    const button = this.toolButtons[this.step];
+    if (!button || !this.carZone) {
+      return;
+    }
+
+    event.preventDefault();
+    this.beginPointer(event, this.carZone, button);
+  };
 
   private readonly handleToolPointerDown = (event: PointerEvent): void => {
     const button = event.currentTarget;
@@ -107,8 +268,12 @@ class CarWashActivity implements Activity {
     }
 
     event.preventDefault();
-    if (this.completing || toolIndex !== this.step) {
-      this.shakeTool(button);
+    if (this.completing) {
+      return;
+    }
+
+    if (toolIndex !== this.step) {
+      this.guideActiveTool();
       return;
     }
 
@@ -116,12 +281,7 @@ class CarWashActivity implements Activity {
       return;
     }
 
-    this.activePointerId = event.pointerId;
-    this.activeToolButton = button;
-    this.lastStrokePoint = null;
-    button.setPointerCapture(event.pointerId);
-    this.showFloatingTool(button, event);
-    this.applyPointer(event);
+    this.beginPointer(event, button, button);
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
@@ -140,190 +300,75 @@ class CarWashActivity implements Activity {
     }
   };
 
+  private readonly tryInitializeLayers = (): void => {
+    if (
+      !this.wrapper ||
+      !this.cleanTexture?.complete ||
+      !this.dirtyTexture?.complete ||
+      this.cleanTexture.naturalWidth === 0 ||
+      this.dirtyTexture.naturalWidth === 0
+    ) {
+      return;
+    }
+
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = CANVAS_WIDTH;
+    maskCanvas.height = CANVAS_HEIGHT;
+    const maskContext = maskCanvas.getContext('2d', {
+      willReadFrequently: true,
+    });
+    if (!maskContext) {
+      return;
+    }
+
+    maskContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    maskContext.drawImage(
+      this.cleanTexture,
+      0,
+      0,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
+
+    this.maskCanvas = maskCanvas;
+    this.maskData = maskContext.getImageData(
+      0,
+      0,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
+    this.coveragePoints = this.createCoveragePoints();
+    this.layersReady = true;
+    this.drawDirtyLayer();
+    if (this.dirtyFallback) {
+      this.dirtyFallback.style.opacity = '0';
+    }
+  };
+
   mount(context: ActivityContext): void {
     this.unmount();
     this.context = context;
     this.abortController = new AbortController();
+    this.pixelRatio = Math.min(
+      MAX_PIXEL_RATIO,
+      Math.max(1, window.devicePixelRatio || 1),
+    );
 
     const wrapper = document.createElement('div');
     wrapper.className = 'kl-wash';
 
     const style = document.createElement('style');
-    style.textContent = `
-      .kl-wash {
-        position: absolute;
-        inset: 0;
-        overflow: hidden;
-        background:
-          radial-gradient(circle at 50% 30%, rgb(255 255 255 / 88%), transparent 35%),
-          linear-gradient(180deg, #d7f3ff 0 69%, #d7e5eb 69% 100%);
-        touch-action: none;
-      }
+    style.textContent = WASH_STYLES;
 
-      .kl-wash__bay {
-        position: absolute;
-        top: clamp(90px, 12vh, 122px);
-        left: 50%;
-        width: min(62vw, 700px);
-        aspect-ratio: 4 / 3;
-        transform: translateX(-50%);
-      }
-
-      .kl-wash__visual,
-      .kl-wash__car,
-      .kl-wash__canvas,
-      .kl-wash__stars {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-      }
-
-      .kl-wash__visual {
-        transform: translateX(0);
-      }
-
-      .kl-wash__car {
-        object-fit: contain;
-        pointer-events: none;
-      }
-
-      .kl-wash__dirty {
-        opacity: 1;
-      }
-
-      .kl-wash__canvas {
-        pointer-events: none;
-      }
-
-      .kl-wash__stars {
-        pointer-events: none;
-      }
-
-      .kl-wash__star {
-        position: absolute;
-        width: clamp(24px, 3.4vw, 42px);
-        aspect-ratio: 1;
-        opacity: 0;
-        transform: scale(0.65);
-      }
-
-      .kl-wash__star::before,
-      .kl-wash__star::after {
-        position: absolute;
-        inset: 44% 0;
-        border-radius: 999px;
-        background: #fff4a6;
-        box-shadow: 0 0 12px rgb(255 240 126 / 72%);
-        content: '';
-      }
-
-      .kl-wash__star::after {
-        transform: rotate(90deg);
-      }
-
-      .kl-wash__star:nth-child(1) { top: 27%; left: 17%; }
-      .kl-wash__star:nth-child(2) { top: 18%; left: 48%; }
-      .kl-wash__star:nth-child(3) { top: 31%; right: 13%; }
-
-      .kl-wash__stars.is-visible .kl-wash__star {
-        opacity: 0.86;
-        transform: scale(1);
-        transition: opacity 260ms ease, transform 260ms ease;
-      }
-
-      .kl-wash__tray {
-        position: absolute;
-        right: max(24px, env(safe-area-inset-right));
-        bottom: max(18px, env(safe-area-inset-bottom));
-        left: max(116px, calc(env(safe-area-inset-left) + 108px));
-        display: flex;
-        height: clamp(104px, 18vh, 148px);
-        align-items: center;
-        justify-content: center;
-        gap: clamp(22px, 5vw, 70px);
-        border: 4px solid rgb(57 89 107 / 10%);
-        border-radius: 34px;
-        background: rgb(255 255 255 / 78%);
-        box-shadow: 0 12px 28px rgb(44 79 99 / 12%);
-      }
-
-      .kl-wash__tool {
-        display: grid;
-        width: clamp(86px, 11vh, 116px);
-        height: clamp(86px, 11vh, 116px);
-        min-width: 80px;
-        min-height: 80px;
-        padding: 8px;
-        place-items: center;
-        border: 4px solid transparent;
-        border-radius: 28px;
-        background: rgb(255 255 255 / 72%);
-        cursor: grab;
-        opacity: 0.28;
-        transform: scale(0.92);
-        transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-      }
-
-      .kl-wash__tool.is-active {
-        border-color: rgb(255 204 73 / 72%);
-        box-shadow: 0 0 0 8px rgb(255 226 127 / 26%), 0 8px 18px rgb(45 82 102 / 14%);
-        cursor: grab;
-        opacity: 1;
-        transform: scale(1);
-      }
-
-      .kl-wash__tool img,
-      .kl-wash__tool svg {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-      }
-
-      .kl-wash__floating {
-        position: absolute;
-        z-index: 12;
-        display: none;
-        width: 104px;
-        height: 104px;
-        place-items: center;
-        pointer-events: none;
-        transform: translate(-50%, -50%);
-      }
-
-      .kl-wash__floating.is-visible {
-        display: grid;
-      }
-
-      .kl-wash__floating img,
-      .kl-wash__floating svg {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        filter: drop-shadow(0 8px 7px rgb(27 62 83 / 22%));
-      }
-
-      @media (max-height: 650px) and (orientation: landscape) {
-        .kl-wash__bay {
-          top: 70px;
-          width: min(56vw, 590px);
-        }
-
-        .kl-wash__tray {
-          height: 104px;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .kl-wash__tool,
-        .kl-wash__star {
-          transition: none;
-        }
-      }
-    `;
+    const background = document.createElement('img');
+    background.className = 'kl-wash__background';
+    background.src = backgroundCarWash;
+    background.alt = '';
+    background.draggable = false;
 
     const bay = document.createElement('div');
     bay.className = 'kl-wash__bay';
+    bay.setAttribute('aria-label', 'くるまをこすって洗う');
 
     const visual = document.createElement('div');
     visual.className = 'kl-wash__visual';
@@ -335,32 +380,31 @@ class CarWashActivity implements Activity {
     cleanImage.draggable = false;
 
     const dirtyImage = document.createElement('img');
-    dirtyImage.className = 'kl-wash__car kl-wash__dirty';
+    dirtyImage.className = 'kl-wash__car kl-wash__dirt-fallback';
     dirtyImage.src = carDirty;
     dirtyImage.alt = '';
     dirtyImage.draggable = false;
 
+    const dirtCanvas = this.createCanvas('kl-wash__canvas kl-wash__dirt');
     const foamCanvas = this.createCanvas('kl-wash__canvas kl-wash__foam');
     const effectCanvas = this.createCanvas('kl-wash__canvas kl-wash__effect');
 
-    const stars = document.createElement('div');
-    stars.className = 'kl-wash__stars';
-    stars.setAttribute('aria-hidden', 'true');
-    for (let index = 0; index < 3; index += 1) {
-      const star = document.createElement('span');
-      star.className = 'kl-wash__star';
-      stars.append(star);
-    }
-
-    visual.append(cleanImage, dirtyImage, foamCanvas, effectCanvas, stars);
+    visual.append(
+      cleanImage,
+      dirtyImage,
+      dirtCanvas,
+      foamCanvas,
+      effectCanvas,
+    );
     bay.append(visual);
 
     const tray = document.createElement('div');
     tray.className = 'kl-wash__tray';
+    tray.setAttribute('role', 'group');
     tray.setAttribute('aria-label', '洗車の道具');
 
     const spongeButton = this.createToolButton(0, washSponge);
-    const hoseButton = this.createToolButton(1);
+    const hoseButton = this.createToolButton(1, washHose);
     const towelButton = this.createToolButton(2, washTowel);
     tray.append(spongeButton, hoseButton, towelButton);
 
@@ -368,36 +412,77 @@ class CarWashActivity implements Activity {
     floatingTool.className = 'kl-wash__floating';
     floatingTool.setAttribute('aria-hidden', 'true');
 
-    wrapper.append(style, bay, tray, floatingTool);
+    wrapper.append(style, background, bay, tray, floatingTool);
     context.root.replaceChildren(wrapper);
 
     this.wrapper = wrapper;
     this.carZone = bay;
     this.carVisual = visual;
-    this.dirtyCar = dirtyImage;
+    this.dirtyFallback = dirtyImage;
+    this.dirtCanvas = dirtCanvas;
     this.foamCanvas = foamCanvas;
     this.effectCanvas = effectCanvas;
     this.floatingTool = floatingTool;
-    this.stars = stars;
     this.toolButtons = [spongeButton, hoseButton, towelButton];
+    this.particles = new ParticleSystem(wrapper);
 
+    const cleanTexture = new Image();
+    cleanTexture.src = carClean;
+    const dirtyTexture = new Image();
+    dirtyTexture.src = carDirty;
     const foamTexture = new Image();
     foamTexture.src = washFoam;
+    this.cleanTexture = cleanTexture;
+    this.dirtyTexture = dirtyTexture;
     this.foamTexture = foamTexture;
 
-    const listenerOptions = { signal: this.abortController.signal };
+    const listenerOptions: AddEventListenerOptions = {
+      signal: this.abortController.signal,
+    };
+    cleanTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
+    dirtyTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
     for (const button of this.toolButtons) {
-      button.addEventListener('pointerdown', this.handleToolPointerDown, listenerOptions);
+      button.addEventListener(
+        'pointerdown',
+        this.handleToolPointerDown,
+        listenerOptions,
+      );
     }
-    wrapper.addEventListener('pointermove', this.handlePointerMove, listenerOptions);
-    wrapper.addEventListener('pointerup', this.handlePointerEnd, listenerOptions);
-    wrapper.addEventListener('pointercancel', this.handlePointerEnd, listenerOptions);
-    wrapper.addEventListener('lostpointercapture', this.handlePointerEnd, listenerOptions);
+    bay.addEventListener(
+      'pointerdown',
+      this.handleBayPointerDown,
+      listenerOptions,
+    );
+    wrapper.addEventListener(
+      'pointermove',
+      this.handlePointerMove,
+      listenerOptions,
+    );
+    wrapper.addEventListener(
+      'pointerup',
+      this.handlePointerEnd,
+      listenerOptions,
+    );
+    wrapper.addEventListener(
+      'pointercancel',
+      this.handlePointerEnd,
+      listenerOptions,
+    );
+    wrapper.addEventListener(
+      'lostpointercapture',
+      this.handlePointerEnd,
+      listenerOptions,
+    );
 
     this.resetRound(false);
+    this.tryInitializeLayers();
   }
 
   unmount(): void {
+    if (this.activePointerId !== null) {
+      this.endDrag(this.activePointerId);
+    }
+
     this.abortController?.abort();
     this.abortController = null;
 
@@ -411,41 +496,73 @@ class CarWashActivity implements Activity {
     }
     this.animations.clear();
 
-    if (this.activePointerId !== null) {
-      this.endDrag(this.activePointerId);
-    }
+    this.particles?.destroy();
+    this.particles = null;
 
     this.wrapper?.remove();
     this.context = null;
     this.wrapper = null;
     this.carZone = null;
     this.carVisual = null;
-    this.dirtyCar = null;
+    this.dirtyFallback = null;
+    this.dirtCanvas = null;
     this.foamCanvas = null;
     this.effectCanvas = null;
+    this.maskCanvas = null;
+    this.maskData = null;
     this.floatingTool = null;
-    this.stars = null;
+    this.cleanTexture = null;
+    this.dirtyTexture = null;
     this.foamTexture = null;
     this.toolButtons = [];
+    this.coveragePoints = [];
     this.coverage.clear();
     this.activePointerId = null;
-    this.activeToolButton = null;
+    this.pointerCaptureOwner = null;
     this.lastStrokePoint = null;
+    this.lastFoamStampPoint = null;
     this.completing = false;
+    this.layersReady = false;
   }
 
   private createCanvas(className: string): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     canvas.className = className;
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    canvas.width = Math.round(CANVAS_WIDTH * this.pixelRatio);
+    canvas.height = Math.round(CANVAS_HEIGHT * this.pixelRatio);
     canvas.setAttribute('aria-hidden', 'true');
     return canvas;
   }
 
+  private getContext(
+    canvas: HTMLCanvasElement | null,
+  ): CanvasRenderingContext2D | null {
+    const context = canvas?.getContext('2d') ?? null;
+    context?.setTransform(
+      this.pixelRatio,
+      0,
+      0,
+      this.pixelRatio,
+      0,
+      0,
+    );
+    return context;
+  }
+
+  private clearCanvas(canvas: HTMLCanvasElement | null): void {
+    const context = this.getContext(canvas);
+    if (!context) {
+      return;
+    }
+
+    context.globalAlpha = 1;
+    context.globalCompositeOperation = 'source-over';
+    context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
   private createToolButton(
     index: WashStep,
-    imageSource?: string,
+    imageSource: string,
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
@@ -453,17 +570,30 @@ class CarWashActivity implements Activity {
     button.dataset.toolIndex = String(index);
     button.setAttribute('aria-label', TOOL_LABELS[index]);
 
-    if (imageSource) {
-      const image = document.createElement('img');
-      image.src = imageSource;
-      image.alt = '';
-      image.draggable = false;
-      button.append(image);
-    } else {
-      button.append(createHoseIcon());
-    }
+    const image = document.createElement('img');
+    image.src = imageSource;
+    image.alt = '';
+    image.draggable = false;
+    button.append(image);
 
     return button;
+  }
+
+  private beginPointer(
+    event: PointerEvent,
+    captureOwner: HTMLElement,
+    button: HTMLButtonElement,
+  ): void {
+    this.activePointerId = event.pointerId;
+    this.pointerCaptureOwner = captureOwner;
+    this.lastStrokePoint = null;
+    try {
+      captureOwner.setPointerCapture(event.pointerId);
+    } catch {
+      this.pointerCaptureOwner = null;
+    }
+    this.showFloatingTool(button, event);
+    this.applyPointer(event);
   }
 
   private showFloatingTool(
@@ -489,37 +619,44 @@ class CarWashActivity implements Activity {
     }
 
     const bounds = this.wrapper.getBoundingClientRect();
-    this.floatingTool.style.left = `${event.clientX - bounds.left}px`;
-    this.floatingTool.style.top = `${event.clientY - bounds.top}px`;
+    this.floatingTool.style.left =
+      String(event.clientX - bounds.left) + 'px';
+    this.floatingTool.style.top =
+      String(event.clientY - bounds.top - TOOL_POINTER_OFFSET) + 'px';
   }
 
   private applyPointer(event: PointerEvent): void {
+    if (!this.layersReady) {
+      return;
+    }
+
     const point = this.toCanvasPoint(event);
-    if (!point) {
+    if (!point || !this.isPointOnCar(point)) {
       this.lastStrokePoint = null;
       return;
     }
 
     const previous = this.lastStrokePoint ?? point;
     const distance = Math.hypot(point.x - previous.x, point.y - previous.y);
-    const stampCount = Math.max(1, Math.ceil(distance / 34));
-    const stamps: Point[] = [];
+    const stampSpacing = this.step === 0 ? 56 : 30;
+    const stampCount = Math.max(1, Math.ceil(distance / stampSpacing));
+    let touched = false;
+
+    if (this.step === 1) {
+      this.clearCanvas(this.effectCanvas);
+    }
 
     for (let index = 1; index <= stampCount; index += 1) {
       const ratio = index / stampCount;
-      stamps.push({
+      const stamp = {
         x: previous.x + (point.x - previous.x) * ratio,
         y: previous.y + (point.y - previous.y) * ratio,
-      });
-    }
+      };
+      if (!this.isPointOnCar(stamp)) {
+        continue;
+      }
 
-    if (this.step === 1) {
-      this.effectCanvas
-        ?.getContext('2d')
-        ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    }
-
-    for (const stamp of stamps) {
+      touched = true;
       this.markCoverage(stamp);
       if (this.step === 0) {
         this.drawFoam(stamp);
@@ -530,15 +667,22 @@ class CarWashActivity implements Activity {
       }
     }
 
-    this.lastStrokePoint = point;
-    const progress = this.coverage.size / COVERAGE_POINTS.length;
-    this.playStrokeFeedback();
-
-    if (this.step === 1 && this.dirtyCar) {
-      this.dirtyCar.style.opacity = String(Math.max(0, 1 - progress / REQUIRED_COVERAGE));
+    if (!touched) {
+      this.lastStrokePoint = null;
+      return;
     }
 
-    if (progress >= REQUIRED_COVERAGE) {
+    if (this.step === 0) {
+      this.clipCanvasToMask(this.foamCanvas);
+    }
+
+    this.lastStrokePoint = point;
+    this.playStrokeFeedback();
+
+    if (
+      this.coveragePoints.length > 0 &&
+      this.coverage.size / this.coveragePoints.length >= REQUIRED_COVERAGE
+    ) {
       this.advanceStep();
     }
   }
@@ -549,36 +693,87 @@ class CarWashActivity implements Activity {
     }
 
     const bounds = this.carZone.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      return null;
+    }
+
     const x = ((event.clientX - bounds.left) / bounds.width) * CANVAS_WIDTH;
     const y = ((event.clientY - bounds.top) / bounds.height) * CANVAS_HEIGHT;
-    if (x < 45 || x > 755 || y < 120 || y > 505) {
+    if (x < 0 || x > CANVAS_WIDTH || y < 0 || y > CANVAS_HEIGHT) {
       return null;
     }
 
     return { x, y };
   }
 
-  private markCoverage(point: Point): void {
-    for (let index = 0; index < COVERAGE_POINTS.length; index += 1) {
-      const target = COVERAGE_POINTS[index];
-      if (!target) {
-        continue;
-      }
+  private isPointOnCar(point: Point): boolean {
+    if (!this.maskData) {
+      return false;
+    }
 
-      if (Math.hypot(point.x - target.x, point.y - target.y) <= BRUSH_RADIUS) {
+    const x = Math.min(
+      CANVAS_WIDTH - 1,
+      Math.max(0, Math.round(point.x)),
+    );
+    const y = Math.min(
+      CANVAS_HEIGHT - 1,
+      Math.max(0, Math.round(point.y)),
+    );
+    const alphaIndex = (y * CANVAS_WIDTH + x) * 4 + 3;
+    return (this.maskData.data[alphaIndex] ?? 0) > 18;
+  }
+
+  private createCoveragePoints(): Point[] {
+    const points: Point[] = [];
+    const columns = 12;
+    const rows = 7;
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const point = {
+          x: 78 + (644 * column) / (columns - 1),
+          y: 112 + (388 * row) / (rows - 1),
+        };
+        if (this.isPointOnCar(point)) {
+          points.push(point);
+        }
+      }
+    }
+
+    return points;
+  }
+
+  private markCoverage(point: Point): void {
+    for (let index = 0; index < this.coveragePoints.length; index += 1) {
+      const target = this.coveragePoints[index];
+      if (
+        target &&
+        Math.hypot(point.x - target.x, point.y - target.y) <= BRUSH_RADIUS
+      ) {
         this.coverage.add(index);
       }
     }
   }
 
   private drawFoam(point: Point): void {
-    const context = this.foamCanvas?.getContext('2d');
+    if (
+      this.lastFoamStampPoint &&
+      Math.hypot(
+        point.x - this.lastFoamStampPoint.x,
+        point.y - this.lastFoamStampPoint.y,
+      ) < 104
+    ) {
+      return;
+    }
+
+    const context = this.getContext(this.foamCanvas);
     if (!context) {
       return;
     }
 
     context.globalCompositeOperation = 'source-over';
-    const size = 104;
+    context.globalAlpha = 0.82;
+    const size = 96;
     if (this.foamTexture?.complete && this.foamTexture.naturalWidth > 0) {
       context.drawImage(
         this.foamTexture,
@@ -587,60 +782,81 @@ class CarWashActivity implements Activity {
         size,
         size,
       );
+      context.globalAlpha = 1;
+      this.lastFoamStampPoint = point;
       return;
     }
 
-    context.fillStyle = 'rgb(255 255 255 / 82%)';
+    context.fillStyle = 'rgb(255 255 255 / 84%)';
     context.beginPath();
     context.arc(point.x - 22, point.y + 4, 26, 0, Math.PI * 2);
     context.arc(point.x + 12, point.y - 10, 34, 0, Math.PI * 2);
     context.arc(point.x + 34, point.y + 18, 23, 0, Math.PI * 2);
     context.fill();
+    context.globalAlpha = 1;
+    this.lastFoamStampPoint = point;
   }
 
   private drawRinse(point: Point): void {
-    const foamContext = this.foamCanvas?.getContext('2d');
-    if (foamContext) {
-      foamContext.save();
-      foamContext.globalCompositeOperation = 'destination-out';
-      foamContext.beginPath();
-      foamContext.arc(point.x, point.y, 82, 0, Math.PI * 2);
-      foamContext.fill();
-      foamContext.restore();
-    }
+    this.eraseAt(this.foamCanvas, point, 92);
+    this.eraseAt(this.dirtCanvas, point, 86);
 
-    const effectContext = this.effectCanvas?.getContext('2d');
-    if (!effectContext) {
+    const context = this.getContext(this.effectCanvas);
+    if (!context) {
       return;
     }
 
-    effectContext.fillStyle = 'rgb(80 190 244 / 48%)';
-    for (let index = 0; index < 3; index += 1) {
-      effectContext.beginPath();
-      effectContext.ellipse(
-        point.x - 38 + index * 36,
-        point.y + index * 14,
-        8,
-        24,
-        -0.35,
-        0,
-        Math.PI * 2,
-      );
-      effectContext.fill();
+    context.globalCompositeOperation = 'source-over';
+    context.strokeStyle = 'rgb(70 184 239 / 62%)';
+    context.lineWidth = 10;
+    context.lineCap = 'round';
+    for (let index = 0; index < 4; index += 1) {
+      const offsetX = -34 + index * 23;
+      context.beginPath();
+      context.moveTo(point.x + offsetX, point.y - 72 + index * 5);
+      context.lineTo(point.x + offsetX + 10, point.y + 34 + index * 4);
+      context.stroke();
     }
   }
 
   private drawWipe(point: Point): void {
-    const context = this.effectCanvas?.getContext('2d');
+    this.eraseAt(this.effectCanvas, point, 104);
+  }
+
+  private eraseAt(
+    canvas: HTMLCanvasElement | null,
+    point: Point,
+    radius: number,
+  ): void {
+    const context = this.getContext(canvas);
     if (!context) {
       return;
     }
 
     context.save();
     context.globalCompositeOperation = 'destination-out';
+    context.fillStyle = '#000';
     context.beginPath();
-    context.arc(point.x, point.y, 92, 0, Math.PI * 2);
+    context.arc(point.x, point.y, radius, 0, Math.PI * 2);
     context.fill();
+    context.restore();
+  }
+
+  private clipCanvasToMask(canvas: HTMLCanvasElement | null): void {
+    const context = this.getContext(canvas);
+    if (!context || !this.maskCanvas) {
+      return;
+    }
+
+    context.save();
+    context.globalCompositeOperation = 'destination-in';
+    context.drawImage(
+      this.maskCanvas,
+      0,
+      0,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
     context.restore();
   }
 
@@ -650,17 +866,12 @@ class CarWashActivity implements Activity {
     }
 
     const now = performance.now();
-    if (this.step === 0 && now - this.lastSoundAt >= 280) {
+    if (this.step === 0 && now - this.lastSoundAt >= 320) {
       this.context.sfx.play('pop');
       this.lastSoundAt = now;
     } else if (this.step === 1 && now - this.lastSoundAt >= 520) {
       this.context.sfx.play('water');
       this.lastSoundAt = now;
-    }
-
-    if (this.step === 1 && !this.waterSpoken) {
-      this.waterSpoken = true;
-      this.context.speech.speak('water');
     }
   }
 
@@ -674,25 +885,22 @@ class CarWashActivity implements Activity {
     }
     this.coverage.clear();
     this.lastStrokePoint = null;
+    this.lastFoamStampPoint = null;
     this.lastSoundAt = 0;
 
     if (this.step === 0) {
       this.step = 1;
-      this.context.speech.speak('foam');
+      this.context.speech.speak('water');
       this.updateToolState();
       return;
     }
 
     if (this.step === 1) {
       this.step = 2;
-      if (this.dirtyCar) {
-        this.dirtyCar.style.opacity = '0';
-      }
-      this.foamCanvas
-        ?.getContext('2d')
-        ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      this.clearCanvas(this.dirtCanvas);
+      this.clearCanvas(this.foamCanvas);
       this.prepareWetLayer();
-      this.context.speech.speak('wipe');
+      this.context.speech.speak('towel');
       this.updateToolState();
       return;
     }
@@ -701,134 +909,229 @@ class CarWashActivity implements Activity {
   }
 
   private prepareWetLayer(): void {
-    const context = this.effectCanvas?.getContext('2d');
-    if (!context) {
+    const context = this.getContext(this.effectCanvas);
+    if (!context || !this.cleanTexture) {
       return;
     }
 
-    context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    context.fillStyle = 'rgb(110 205 245 / 26%)';
-    context.beginPath();
-    context.ellipse(400, 335, 342, 174, 0, 0, Math.PI * 2);
-    context.fill();
+    this.clearCanvas(this.effectCanvas);
+    context.globalCompositeOperation = 'source-over';
+    context.globalAlpha = 1;
+    context.drawImage(
+      this.cleanTexture,
+      0,
+      0,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = 'rgb(76 188 239 / 24%)';
+    context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    context.globalCompositeOperation = 'source-over';
   }
 
   private completeWash(): void {
-    if (!this.context || this.completing) {
+    if (!this.context || !this.carVisual) {
       return;
     }
 
     this.completing = true;
-    this.updateToolState();
-    this.effectCanvas
-      ?.getContext('2d')
-      ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    this.foamCanvas
-      ?.getContext('2d')
-      ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    this.stars?.classList.add('is-visible');
+    this.clearCanvas(this.dirtCanvas);
+    this.clearCanvas(this.foamCanvas);
+    this.clearCanvas(this.effectCanvas);
     this.context.sfx.play('chime');
     this.context.speech.speak('clean');
     this.context.notifyTaskComplete();
 
-    this.schedule(() => {
-      this.context?.speech.speak('wellDone');
-    }, 680);
+    this.sparkleAtCar();
 
-    this.schedule(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.setTimer(() => this.resetRound(true), 900);
+      return;
+    }
+
+    const bounce = this.carVisual.animate(
+      [
+        { transform: 'translateY(0) scale(1)' },
+        { transform: 'translateY(-10px) scale(1.035)' },
+        { transform: 'translateY(0) scale(1)' },
+      ],
+      { duration: 520, easing: 'ease-out' },
+    );
+    this.trackAnimation(bounce);
+
+    this.setTimer(() => {
+      this.context?.sfx.play('applause');
+      this.context?.speech.speak('wellDone');
+    }, 560);
+
+    this.setTimer(() => {
       if (!this.carVisual) {
         return;
       }
-      const driveAnimation = this.carVisual.animate(
+
+      const leaving = this.carVisual.animate(
         [
           { transform: 'translateX(0)' },
-          { transform: 'translateX(82vw)' },
+          { transform: 'translateX(118vw)' },
         ],
-        {
-          duration: 920,
-          easing: 'ease-in-out',
-          fill: 'forwards',
-        },
+        { duration: 1050, easing: 'ease-in', fill: 'forwards' },
       );
-      this.trackAnimation(driveAnimation);
-    }, 820);
+      this.trackAnimation(leaving);
+      leaving.addEventListener(
+        'finish',
+        () => {
+          if (!this.carVisual || !this.context) {
+            return;
+          }
 
-    this.schedule(() => this.resetRound(true), 1_900);
+          leaving.cancel();
+          this.resetRound(false);
+          this.completing = true;
+          const entering = this.carVisual.animate(
+            [
+              { transform: 'translateX(-118vw)' },
+              { transform: 'translateX(0)' },
+            ],
+            { duration: 1050, easing: 'ease-out' },
+          );
+          this.trackAnimation(entering);
+          entering.addEventListener(
+            'finish',
+            () => {
+              if (!this.context) {
+                return;
+              }
+              this.completing = false;
+              this.context.speech.speak('sponge');
+            },
+            { once: true },
+          );
+        },
+        { once: true },
+      );
+    }, 1100);
   }
 
-  private resetRound(animateEntrance: boolean): void {
-    for (const animation of this.animations) {
-      animation.cancel();
+  private sparkleAtCar(): void {
+    if (!this.particles || !this.carZone || !this.wrapper) {
+      return;
     }
-    this.animations.clear();
 
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+    const bayRect = this.carZone.getBoundingClientRect();
+    this.particles.emitBubbles(
+      bayRect.left - wrapperRect.left + bayRect.width / 2,
+      bayRect.top - wrapperRect.top + bayRect.height / 2,
+      14,
+    );
+    this.particles.emitSparkles(
+      bayRect.left - wrapperRect.left + bayRect.width / 2,
+      bayRect.top - wrapperRect.top + bayRect.height / 2,
+      10,
+      '#4fc3f7',
+    );
+  }
+
+  private resetRound(announce: boolean): void {
     this.step = 0;
     this.coverage.clear();
     this.lastStrokePoint = null;
+    this.lastFoamStampPoint = null;
     this.lastSoundAt = 0;
-    this.waterSpoken = false;
     this.completing = false;
-    this.dirtyCar?.style.removeProperty('opacity');
-    this.stars?.classList.remove('is-visible');
-    this.foamCanvas
-      ?.getContext('2d')
-      ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    this.effectCanvas
-      ?.getContext('2d')
-      ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    this.updateToolState();
+    this.clearCanvas(this.dirtCanvas);
+    this.clearCanvas(this.foamCanvas);
+    this.clearCanvas(this.effectCanvas);
 
-    if (animateEntrance && this.carVisual) {
-      const entranceAnimation = this.carVisual.animate(
-        [
-          { transform: 'translateX(-76vw)' },
-          { transform: 'translateX(0)' },
-        ],
-        {
-          duration: 720,
-          easing: 'ease-out',
-        },
-      );
-      this.trackAnimation(entranceAnimation);
+    if (this.layersReady) {
+      this.drawDirtyLayer();
+      if (this.dirtyFallback) {
+        this.dirtyFallback.style.opacity = '0';
+      }
+    } else if (this.dirtyFallback) {
+      this.dirtyFallback.style.opacity = '1';
     }
+
+    this.updateToolState();
+    if (announce) {
+      this.context?.speech.speak('sponge');
+    }
+  }
+
+  private drawDirtyLayer(): void {
+    const context = this.getContext(this.dirtCanvas);
+    if (!context || !this.dirtyTexture) {
+      return;
+    }
+
+    this.clearCanvas(this.dirtCanvas);
+    context.globalCompositeOperation = 'source-over';
+    context.globalAlpha = 1;
+    context.drawImage(
+      this.dirtyTexture,
+      0,
+      0,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
   }
 
   private updateToolState(): void {
-    for (let index = 0; index < this.toolButtons.length; index += 1) {
-      this.toolButtons[index]?.classList.toggle(
-        'is-active',
-        !this.completing && index === this.step,
-      );
-    }
+    this.toolButtons.forEach((button, index) => {
+      const active = index === this.step;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+      button.setAttribute('aria-disabled', String(!active));
+    });
   }
 
-  private shakeTool(button: HTMLButtonElement): void {
+  private guideActiveTool(): void {
+    const button = this.toolButtons[this.step];
+    if (!button) {
+      return;
+    }
+
     const animation = button.animate(
       [
-        { transform: 'translateX(0) scale(0.92)' },
-        { transform: 'translateX(-8px) scale(0.92)' },
-        { transform: 'translateX(8px) scale(0.92)' },
-        { transform: 'translateX(-5px) scale(0.92)' },
-        { transform: 'translateX(0) scale(0.92)' },
+        { transform: 'scale(1.04)' },
+        { transform: 'scale(1.12)' },
+        { transform: 'scale(1.04)' },
       ],
-      { duration: 280, easing: 'ease-out' },
+      { duration: 360, easing: 'ease-out' },
     );
     this.trackAnimation(animation);
+    this.context?.speech.speak(TOOL_VOCAB[this.step]);
   }
 
   private endDrag(pointerId: number): void {
-    const activeButton = this.activeToolButton;
-    this.activePointerId = null;
-    this.activeToolButton = null;
-    this.lastStrokePoint = null;
-    if (activeButton?.hasPointerCapture(pointerId)) {
-      activeButton.releasePointerCapture(pointerId);
+    if (
+      this.pointerCaptureOwner &&
+      this.pointerCaptureOwner.hasPointerCapture(pointerId)
+    ) {
+      try {
+        this.pointerCaptureOwner.releasePointerCapture(pointerId);
+      } catch {
+        // Safari may release capture before pointercancel reaches the wrapper.
+      }
     }
+
+    this.activePointerId = null;
+    this.pointerCaptureOwner = null;
+    this.lastStrokePoint = null;
     this.floatingTool?.classList.remove('is-visible');
     this.floatingTool?.replaceChildren();
+
+    if (this.step === 1) {
+      this.setTimer(() => {
+        if (this.step === 1) {
+          this.clearCanvas(this.effectCanvas);
+        }
+      }, 140);
+    }
   }
 
-  private schedule(callback: () => void, delay: number): void {
+  private setTimer(callback: () => void, delay: number): void {
     const timer = window.setTimeout(() => {
       this.timers.delete(timer);
       callback();
@@ -838,9 +1141,11 @@ class CarWashActivity implements Activity {
 
   private trackAnimation(animation: Animation): void {
     this.animations.add(animation);
-    void animation.finished
-      .catch(() => undefined)
-      .finally(() => this.animations.delete(animation));
+    const remove = (): void => {
+      this.animations.delete(animation);
+    };
+    animation.addEventListener('finish', remove, { once: true });
+    animation.addEventListener('cancel', remove, { once: true });
   }
 }
 

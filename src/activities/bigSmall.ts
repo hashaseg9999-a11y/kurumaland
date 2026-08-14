@@ -1,15 +1,16 @@
-import carBlue from '../assets/car_blue.webp';
-import carBlueBig from '../assets/car_blue_big.webp';
-import carGreen from '../assets/car_green.webp';
-import carGreenBig from '../assets/car_green_big.webp';
-import carRed from '../assets/car_red.webp';
-import carRedBig from '../assets/car_red_big.webp';
-import carYellow from '../assets/car_yellow.webp';
-import carYellowBig from '../assets/car_yellow_big.webp';
-import menuIcon from '../assets/menu_big-small.webp';
-import parkingBig from '../assets/parking_big.webp';
-import parkingSmall from '../assets/parking_small.webp';
+import carBlue from '../assets/car_blue.svg';
+import carBlueBig from '../assets/car_blue_big.svg';
+import carGreen from '../assets/car_green.svg';
+import carGreenBig from '../assets/car_green_big.svg';
+import carRed from '../assets/car_red.svg';
+import carRedBig from '../assets/car_red_big.svg';
+import carYellow from '../assets/car_yellow.svg';
+import carYellowBig from '../assets/car_yellow_big.svg';
+import menuIcon from '../assets/menu_big-small.svg';
+import parkingBig from '../assets/parking_big.svg';
+import parkingSmall from '../assets/parking_small.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
 type SizeName = 'big' | 'small';
 
@@ -166,6 +167,7 @@ class BigSmallActivity implements Activity {
   private readonly animations = new Set<Animation>();
   private readonly carAnimations = new Map<HTMLButtonElement, Animation>();
   private readonly timers = new Set<number>();
+  private particles: ParticleSystem | null = null;
   private parkedCount = 0;
   private roundFinishing = false;
   private pairIndex = -1;
@@ -296,6 +298,7 @@ class BigSmallActivity implements Activity {
 
     context.root.replaceChildren(style, board);
     this.board = board;
+    this.particles = new ParticleSystem(board);
     this.startRound();
   }
 
@@ -307,6 +310,8 @@ class BigSmallActivity implements Activity {
     }
     this.dragState = null;
     this.cancelAnimations();
+    this.particles?.destroy();
+    this.particles = null;
     for (const timer of this.timers) {
       window.clearTimeout(timer);
     }
@@ -414,6 +419,7 @@ class BigSmallActivity implements Activity {
 
     this.context.sfx.play('chime');
     this.context.speech.speak(drag.size);
+    this.sparkleAt(parking);
     this.parkedCount += 1;
     if (this.parkedCount === this.parkingSpaces.size) {
       this.finishRound();
@@ -462,6 +468,21 @@ class BigSmallActivity implements Activity {
       easing: 'ease-out',
     });
     this.trackAnimation(animation, drag.button);
+  }
+
+  private sparkleAt(element: HTMLElement): void {
+    if (!this.particles || !this.board) {
+      return;
+    }
+
+    const boardRect = this.board.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    this.particles.emitStars(
+      rect.left - boardRect.left + rect.width / 2,
+      rect.top - boardRect.top + rect.height / 2,
+      8,
+      ['#69f0ae', '#ffd740', '#ff5252', '#448aff'],
+    );
   }
 
   private finishRound(): void {

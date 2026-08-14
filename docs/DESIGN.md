@@ -57,8 +57,10 @@ KurumaLand/
     │   ├── bigSmall.ts    # A3 おおきい・ちいさい
     │   ├── trace.ts       # A4 みちをなぞろう
     │   ├── carWash.ts     # A5 くるまあらい
-    │   └── puzzle.ts      # A6 くるまパズル
-    ├── assets/            # NANOBANANA生成画像(§7)
+    │   ├── puzzle.ts      # A6 くるまパズル
+    │   ├── lightsSound.ts # A7 おととひかり（音・光あそび）
+    │   └── lineUp.ts      # A8 ならべてれっしゃ（並べる・つなげる）
+    ├── assets/            # SVG生成素材（§7）。車は tools/generate_cars.cjs から生成
     └── styles/
 ```
 
@@ -155,22 +157,25 @@ plain solid white background (to be removed), no text, no watermark
 
 ### 素材リストと命名規約(配置先: `src/assets/`)
 
+> 車両・車庫・信号・洗車道具・駐車枠・メニューアイコンは **SVG**（`tools/generate_cars.cjs` から決定的に生成）。背景のみWebP（シーンの写実性を活かす）。
+
 | ファイル名 | 内容 | 備考 |
 |---|---|---|
-| `car_{color}.webp` | 乗用車(横向き・笑顔) | color = red / blue / yellow / green |
-| `car_{color}_big.webp` | 大きい働く車(バス・トラック等) | A3用。redはトラック、blueはバス等、車種で差別化可 |
-| `garage_{color}.webp` | 車庫(正面・入口が見える) | 4色。車と同じ色相に揃える |
-| `parking_big.webp` / `parking_small.webp` | 駐車枠(俯瞰) | A3用 |
-| `signal.webp` | 信号機(消灯状態) | 点灯はCSSオーバーレイで表現 |
-| `wash_sponge.webp` / `wash_foam.webp` / `wash_towel.webp` | スポンジ・泡・タオル | A5用 |
-| `car_dirty.webp` | 泥はね付きの車 | A5用(汚れは別レイヤーでも可) |
-| `bg_road.webp` | 道路と空の背景(横長) | 共通背景。1280×960目安 |
-| `menu_{activityId}.webp` | メニューアイコン(6種) | 例 `menu_color-garage.webp` |
+| `car_{color}.svg` | 乗用車（横向き・笑顔） | color = red(消防車) / blue(パトカー) / yellow(ダンプ) / green(トラック)。車種で差別化 |
+| `car_{color}_big.svg` | 大きい働く車（Big版） | A3用。`_big` は1.4倍スケール |
+| `car_dirty.svg` | 泥はね付きの車 | A5用 |
+| `garage_{color}.svg` | 車庫（アーチ屋根・正面） | 4色。車と同じ色相 |
+| `parking_big.svg` / `parking_small.svg` | 駐車枠（俯瞰） | A3・A8用 |
+| `signal.svg` | 信号機（消灯状態） | 点灯はCSSオーバーレイで表現。レンズ位置はCSS(10.5% / 61.5%)と整合 |
+| `wash_sponge.svg` / `wash_foam.svg` / `wash_hose.svg` / `wash_towel.svg` | スポンジ・泡・ホース・タオル | A5用 |
+| `bg_road.webp` | 道路と空の背景（横長） | 共通背景。1280×960目安 |
+| `bg_car_wash.webp` | 洗車場背景（横長） | A5用。1280×960目安 |
+| `menu_{activityId}.svg` | メニューアイコン(8種) | 例 `menu_lights-sound.svg` |
 | `app_icon.png` | PWAアイコン(512×512、背景あり) | public/ に配置 |
 
-- 形式: WebP(アイコンのみPNG)。1枚200KB以下、**合計3MB以内**
+- 形式: 主にSVG（背景のみWebP、アイコンのみPNG）。SVGはスケール可・軽量
 - 車のスプライトは進行方向=右向きで統一
-- パズル(A6)は `car_red.webp` をコード側で分割描画(canvas)するため専用素材不要
+- パズル(A6)は `car_red.svg` 等をコード側で分割描画(canvas)するため専用素材不要
 
 ## 8. iPad Safari 固有要件(足場イシューで実装、全員が維持)
 
@@ -199,3 +204,5 @@ plain solid white background (to be removed), no text, no watermark
 | `trace` | みちをなぞろう | 微細運動 | 太い道(直線→曲線→ジグザグ)を指でなぞると車が追従 |
 | `car-wash` | くるまあらい | 順序・スワイプ | スポンジで泡→水で流す→タオルで拭く、の3ステップ洗車 |
 | `puzzle` | くるまパズル | 形の認知 | 車の絵を2〜4分割し、枠へドラッグして完成させる |
+| `lights-sound` | おととひかり | 因果・聴覚 | 夜の画面の車をタップすると音(サイレン/クラクション)と光(ヘッドライト/ハザード)が出る |
+| `line-up` | ならべてれっしゃ | 順序・大小 | 消防車を先頭に車を次々連結し、列車を完成させて走らせる |

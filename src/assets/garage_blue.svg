@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180" width="200" height="180">
+  <!-- Ground Shadow -->
+  <ellipse cx="100" cy="176" rx="88" ry="6" fill="rgba(21, 51, 74, 0.18)" />
+
+  <!-- Arched Garage Body -->
+  <path d="M 16 176 L 16 64 Q 100 10 184 64 L 184 176 Z" fill="#448AFF" stroke="#15334A" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Door Opening -->
+  <path d="M 50 176 L 50 86 Q 100 46 150 86 L 150 176 Z" fill="#1565C0" stroke="#15334A" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Interior Floor -->
+  <rect x="54" y="148" width="92" height="28" fill="#FFFFFF" opacity="0.35"/>
+
+  <!-- Roof Highlight -->
+  <path d="M 30 58 Q 100 14 170 58" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Side Trim -->
+  <rect x="16" y="118" width="7" height="58" rx="3.5" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="177" y="118" width="7" height="58" rx="3.5" fill="#FFFFFF" opacity="0.35"/>
+</svg>

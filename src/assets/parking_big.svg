@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260">
+  <!-- Ground -->
+  <rect x="10" y="10" width="400" height="240" rx="18" fill="#DEE6EA" stroke="#15334A" stroke-width="6"/>
+
+  <!-- White Parking Line -->
+  <rect x="32" y="32" width="356" height="196" rx="10" fill="none" stroke="#FFFFFF" stroke-width="16"/>
+
+  <!-- Wheel Stop Bar -->
+  <rect x="70" y="56" width="280" height="20" rx="10" fill="#90A4AE" stroke="#15334A" stroke-width="4"/>
+  <rect x="70" y="56" width="280" height="8" rx="4" fill="#B0BEC5"/>
+
+  <!-- Entry Chevrons -->
+  <path d="M 210 232 L 194 210 L 226 210 Z" fill="#8BC34A" stroke="#15334A" stroke-width="3"/>
+  <path d="M 210 206 L 194 184 L 226 184 Z" fill="#8BC34A" stroke="#15334A" stroke-width="3"/>
+</svg>
