@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" width="220" height="140">
+  <g transform="translate(5, 5)">
+    <!-- Curved Winding Road -->
+    <path d="M 10 110 Q 60 10 100 60 T 190 10" fill="none" stroke="#5C677D" stroke-width="32" stroke-linecap="round"/>
+    <path d="M 10 110 Q 60 10 100 60 T 190 10" fill="none" stroke="#FFD166" stroke-width="4" stroke-dasharray="10 8" stroke-linecap="round"/>
+
+    <!-- Green Utility Truck Riding Road -->
+    <g transform="translate(42, 5) scale(0.72)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Roof Beacon Light -->
+    <rect x="130" y="16" width="12" height="9" rx="2.5" fill="#52B788" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Rear Green Container -->
+    <rect x="22" y="26" width="85" height="66" rx="10" fill="#2A9D8F" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="64" cy="56" r="16" fill="#E9C46A" opacity="0.95" stroke="#15334A" stroke-width="2"/>
+    <!-- Leaf Icon Motif -->
+    <path d="M 64 45 Q 75 51 70 65 Q 55 67 64 45 Z" fill="#2A9D8F"/>
+
+    <!-- Green Cabin Front -->
+    <path d="M 108 24 L 152 24 C 162 24 170 32 174 44 L 176 92 L 108 92 Z" fill="#52B788" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- Cabin Window -->
+    <path d="M 116 30 L 148 30 C 154 30 158 35 160 44 L 161 52 L 116 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <ellipse cx="138" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <ellipse cx="140" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
+    <circle cx="138" cy="37" r="2.6" fill="#FFFFFF"/>
+    <circle cx="142" cy="44" r="1.2" fill="#FFFFFF"/>
+    <path d="M 128 25 Q 138 21 148 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Headlight -->
+    <circle cx="174" cy="62" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="52" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="52" cy="94" r="9" fill="#E9C46A" stroke="#15334A" stroke-width="2"/>
+    <circle cx="52" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E9C46A" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+  </g>
+</svg>

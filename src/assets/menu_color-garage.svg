@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" width="220" height="140">
+  <g transform="translate(5, 5)">
+    <!-- Blue Garage Arch -->
+    <path d="M 15 115 L 15 40 Q 105 12 195 40 L 195 115 Z" fill="#74C0FC" stroke="#15334A" stroke-width="4"/>
+    <path d="M 28 115 L 28 48 Q 105 25 182 48 L 182 115 Z" fill="#1971C2" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Police Car Emerging -->
+    <g transform="translate(10, 24) scale(0.82)">
+      
+  <!-- Drop Shadow -->
+  <ellipse cx="100" cy="118" rx="82" ry="10" fill="rgba(21, 51, 74, 0.2)" />
+
+  <g transform="translate(0, 0)">
+    <!-- Red V-Siren Bar Glow -->
+    <circle cx="105" cy="12" r="14" fill="#FF2D55" opacity="0.3"/>
+    <!-- V-Siren Bar Body -->
+    <path d="M 90 16 L 118 16 L 123 23 L 85 23 Z" fill="#FF2D55" stroke="#15334A" stroke-width="2.5"/>
+    <rect x="98" y="23" width="12" height="5" fill="#CED4DA" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Police Car Roof Curve (White) -->
+    <path d="M 48 42 L 65 24 L 135 24 C 150 24 160 33 166 42 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+
+    <!-- Lower Body Base (Black) -->
+    <path d="M 22 42 C 22 42 22 92 36 92 L 180 92 C 188 92 188 72 186 60 C 184 50 174 42 166 42 Z" fill="#1A1A1E" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    
+    <!-- White Top Body Wrap -->
+    <path d="M 22 44 L 182 44 L 182 60 Q 100 62 22 60 Z" fill="#FFFFFF"/>
+    <line x1="22" y1="60" x2="182" y2="60" stroke="#15334A" stroke-width="3"/>
+
+    <!-- Rear Window & Front Windshield -->
+    <rect x="62" y="28" width="32" height="16" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 98 28 L 132 28 C 140 28 146 32 150 40 L 152 44 L 98 44 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+
+    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
+    <ellipse cx="128" cy="36" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
+    <ellipse cx="130" cy="36" rx="5" ry="6.5" fill="#152B3C"/>
+    <circle cx="128" cy="32" r="2.6" fill="#FFFFFF"/>
+    <circle cx="132" cy="39" r="1.2" fill="#FFFFFF"/>
+    <path d="M 118 22 Q 128 18 138 23" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Gold Police Star Badge Emblem on Side Door -->
+    <polygon points="98,66 100,72 106,72 101,76 103,82 98,78 93,82 95,76 90,72 96,72" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
+
+    <!-- Front Bumper & Friendly Smile -->
+    <path d="M 162 76 Q 168 82 174 76" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Cute Big Headlight -->
+    <circle cx="178" cy="55" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
+    <circle cx="179" cy="53" r="2.2" fill="#FFFFFF"/>
+
+    <!-- Rear Taillight -->
+    <rect x="17" y="52" width="7" height="14" rx="3" fill="#FF3B30" stroke="#15334A" stroke-width="2.5"/>
+
+    <!-- Wheels (Back) -->
+    <circle cx="50" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="50" cy="94" r="9" fill="#E2E8F0" stroke="#15334A" stroke-width="2"/>
+    <circle cx="50" cy="94" r="3.5" fill="#15334A"/>
+
+    <!-- Wheels (Front) -->
+    <circle cx="145" cy="94" r="20" fill="#2B2D42" stroke="#15334A" stroke-width="4.5"/>
+    <circle cx="145" cy="94" r="9" fill="#E2E8F0" stroke="#15334A" stroke-width="2"/>
+    <circle cx="145" cy="94" r="3.5" fill="#15334A"/>
+  </g>
+
+    </g>
+  </g>
+</svg>

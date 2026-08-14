@@ -4,6 +4,12 @@
 
 アプリ開発プロジェクト
 
+## 開発フォルダ
+
+```text
+C:\Users\h-hasegawa\Documents\apps\KurumaLand
+```
+
 ## 目的
 
 1歳8ヶ月の幼児向け・車テーマの知育PWA。色・形・大小の認知と手先の操作(微細運動)を育てる。
@@ -11,16 +17,16 @@
 
 ## 状態
 
-6種類のアクティビティ、3言語音声、保護者向け設定、おしまいタイマーを実装済み。
-`main` に反映されるとGitHub Actionsがビルドし、GitHub Pagesへ公開する。
+8種類のアクティビティ、3言語音声、保護者向け設定、おしまいタイマーを実装済み。
+`master` に反映されるとGitHub Actionsがビルドし、GitHub Pagesへ公開する。
 
-公開URL: `https://hashaseg9999-a11y.github.io/kurumaland/`
+公開URL: `https://hashaseg9999-a11y.github.io/apps/`
 
 ## 技術スタック
 
 - Vite + TypeScript(Vanilla TS、フレームワークなし)
 - PWA(vite-plugin-pwa)/ GitHub Pages 配信
-- 画像素材: NANOBANANA 生成(透過WebP)
+- 画像素材: SVG生成（`tools/generate_cars.cjs`）+ 背景のみWebP
 - 音声: Web Speech API(ja / en / th)
 
 ## 設計ドキュメント
@@ -38,14 +44,16 @@ npm run dev
 
 ## 遊び方
 
-絵をタップして、次の6種類から遊びを選ぶ。
+絵をタップして、次の8種類から遊びを選ぶ。
 
-- しんごうでGO
-- いろのしゃこ
+- しんごうで GO!
+- いろの しゃこ
 - おおきい・ちいさい
-- みちをなぞろう
+- みちを なぞろう
 - くるまあらい
-- くるまパズル
+- くるま パズル
+- おとと ひかり
+- ならべて れっしゃ
 
 画面左上の家ボタンで、いつでも遊びの選択画面に戻れる。
 
@@ -84,11 +92,11 @@ npm run preview
 
 ## GitHub Pagesへの公開
 
-`main` ブランチが更新されると、`.github/workflows/deploy.yml` が次を自動実行する。
+`master` ブランチの `KurumaLand/**` が更新されると、`.github/workflows/deploy-kurumaland.yml` が次を自動実行する。
 
 1. `npm ci`
 2. `npm run build`
-3. `dist` をGitHub Pagesへ公開
+3. `KurumaLand/dist` をGitHub Pagesへ公開
 
 初回のみ、GitHubリポジトリの「Settings」→「Pages」→「Build and deployment」で、Sourceを「GitHub Actions」に設定する。
 

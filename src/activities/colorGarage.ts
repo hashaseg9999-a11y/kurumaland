@@ -1,13 +1,14 @@
-import carBlue from '../assets/car_blue.webp';
-import carGreen from '../assets/car_green.webp';
-import carRed from '../assets/car_red.webp';
-import carYellow from '../assets/car_yellow.webp';
-import garageBlue from '../assets/garage_blue.webp';
-import garageGreen from '../assets/garage_green.webp';
-import garageRed from '../assets/garage_red.webp';
-import garageYellow from '../assets/garage_yellow.webp';
-import menuIcon from '../assets/menu_color-garage.webp';
+import carBlue from '../assets/car_blue.svg';
+import carGreen from '../assets/car_green.svg';
+import carRed from '../assets/car_red.svg';
+import carYellow from '../assets/car_yellow.svg';
+import garageBlue from '../assets/garage_blue.svg';
+import garageGreen from '../assets/garage_green.svg';
+import garageRed from '../assets/garage_red.svg';
+import garageYellow from '../assets/garage_yellow.svg';
+import menuIcon from '../assets/menu_color-garage.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
 type ColorName = 'red' | 'blue' | 'yellow' | 'green';
 
@@ -165,6 +166,7 @@ class ColorGarageActivity implements Activity {
   private readonly animations = new Set<Animation>();
   private readonly carAnimations = new Map<HTMLButtonElement, Animation>();
   private readonly timers = new Set<number>();
+  private particles: ParticleSystem | null = null;
   private colorCount = 2;
   private correctStreak = 0;
   private parkedCount = 0;
@@ -300,6 +302,7 @@ class ColorGarageActivity implements Activity {
 
     context.root.replaceChildren(style, board);
     this.board = board;
+    this.particles = new ParticleSystem(board);
     this.startRound();
   }
 
@@ -311,6 +314,8 @@ class ColorGarageActivity implements Activity {
     }
     this.dragState = null;
     this.cancelAnimations();
+    this.particles?.destroy();
+    this.particles = null;
     for (const timer of this.timers) {
       window.clearTimeout(timer);
     }
@@ -416,6 +421,7 @@ class ColorGarageActivity implements Activity {
 
     this.context.sfx.play('chime');
     this.context.speech.speak(drag.color);
+    this.sparkleAt(garage);
     this.correctStreak += 1;
     if (this.correctStreak >= 3 && this.colorCount < COLOR_ITEMS.length) {
       this.colorCount += 1;
@@ -470,6 +476,30 @@ class ColorGarageActivity implements Activity {
       easing: 'ease-out',
     });
     this.trackAnimation(animation, drag.button);
+  }
+
+  private sparkleAt(element: HTMLElement): void {
+    if (!this.particles || !this.board) {
+      return;
+    }
+
+    const boardRect = this.board.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    const color = element.dataset.color as ColorName | undefined;
+    const palette =
+      color === 'red'
+        ? ['#ff5252', '#ffd740']
+        : color === 'blue'
+          ? ['#448aff', '#ffd740']
+          : color === 'yellow'
+            ? ['#ffd740', '#fff176']
+            : ['#69f0ae', '#ffd740'];
+    this.particles.emitSparkles(
+      rect.left - boardRect.left + rect.width / 2,
+      rect.top - boardRect.top + rect.height / 2,
+      10,
+      palette[0],
+    );
   }
 
   private finishRound(): void {

@@ -1,11 +1,12 @@
 import bgRoad from '../assets/bg_road.webp';
-import carBlue from '../assets/car_blue.webp';
-import carGreen from '../assets/car_green.webp';
-import carRed from '../assets/car_red.webp';
-import carYellow from '../assets/car_yellow.webp';
-import menuIcon from '../assets/menu_signal.webp';
-import signalImage from '../assets/signal.webp';
+import carBlue from '../assets/car_blue.svg';
+import carGreen from '../assets/car_green.svg';
+import carRed from '../assets/car_red.svg';
+import carYellow from '../assets/car_yellow.svg';
+import menuIcon from '../assets/menu_signal.svg';
+import signalImage from '../assets/signal.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { ParticleSystem } from '../core/particles';
 
 const CAR_IMAGES = [carRed, carBlue, carYellow, carGreen] as const;
 
@@ -109,6 +110,7 @@ class SignalActivity implements Activity {
   private driveAnimation: Animation | null = null;
   private feedbackAnimation: Animation | null = null;
   private entranceAnimation: Animation | null = null;
+  private particles: ParticleSystem | null = null;
   private isDriving = false;
   private carsCompleted = 0;
   private carIndex = -1;
@@ -195,6 +197,14 @@ class SignalActivity implements Activity {
     stage.append(signalButton, carButton);
     context.root.replaceChildren(style, stage);
 
+    this.particles = new ParticleSystem(stage);
+    this.particles.emitSparkles(
+      stage.clientWidth / 2,
+      stage.clientHeight / 2,
+      6,
+      '#ffd700',
+    );
+
     signalButton.addEventListener('pointerdown', this.handleSignalPointerDown, {
       signal: this.listeners.signal,
     });
@@ -218,6 +228,9 @@ class SignalActivity implements Activity {
     this.driveAnimation = null;
     this.feedbackAnimation = null;
     this.entranceAnimation = null;
+
+    this.particles?.destroy();
+    this.particles = null;
 
     this.root?.replaceChildren();
     this.signalButton = null;
@@ -286,6 +299,8 @@ class SignalActivity implements Activity {
       this.context.speech.speak('wellDone');
     }
 
+    this.sparkleAtCar();
+
     this.isDriving = false;
     this.signalButton.classList.remove('is-green');
     this.signalButton.setAttribute('aria-label', 'あかしんごう');
@@ -310,6 +325,20 @@ class SignalActivity implements Activity {
         this.entranceAnimation = null;
       }
     };
+  }
+
+  private sparkleAtCar(): void {
+    if (!this.particles || !this.carButton || !this.root) {
+      return;
+    }
+
+    const rootRect = this.root.getBoundingClientRect();
+    const carRect = this.carButton.getBoundingClientRect();
+    this.particles.emitSparkles(
+      carRect.left - rootRect.left + carRect.width / 2,
+      carRect.top - rootRect.top + carRect.height / 2,
+      12,
+    );
   }
 
   private selectNextCar(): void {

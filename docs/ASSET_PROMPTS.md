@@ -159,3 +159,42 @@ Cute flat cartoon illustration for a toddler app menu icon, simple rounded shape
 A friendly smiling car visually separated into 3 crisp jigsaw puzzle pieces fitting together.
 Centered on a 300x300 canvas, transparent background, plain solid white background (to be removed), no text, no words, no logo, no frame card border, no watermark.
 ```
+
+---
+
+## 6. AntiGravity SOLUltra 生成セッション（洗車QA品質向上）で使用した全文プロンプト一覧
+
+### 6-1. `bg_car_wash.webp` (1280×960 WebP・完全不透明)
+```text
+[Style Reference: exec-df9ca725-755f-4932-9011-a0a85fd3bf31.png (selected design option 1)]
+Cute flat cartoon illustration of an outdoor car wash station for a toddler app, 1280x960 aspect ratio 4:3, bright cheerful colors, thick soft outlines (#4A3B32), NANOBANANA style.
+
+Scene: A friendly outdoor car wash bay viewed from the front. Light blue sky with soft white clouds at the top. Green rounded bushes and gentle hills visible on both sides behind low beige/cream walls.
+
+The car wash structure has:
+- A wide blue-grey curved roof/canopy spanning across the top
+- Two white/cream vertical pillars on each side supporting the roof
+- Yellow pipes/plumbing running vertically and horizontally along the pillars
+- A blue shower head hanging from the right side of the yellow horizontal pipe with small blue water drops falling
+- A blue coiled garden hose on the left ground connected to a yellow valve on the wall
+- A blue bucket with yellow handle on the right side ground
+- A grey metal drain grate centered on the ground
+- Light blue water puddles on the beige/tan ground floor
+- Some small brown mud spots near the puddles
+
+The ground is a beige/tan concrete wash bay floor. The center area must be completely clear and empty (no car, no tools, no characters, no sponge, no towel, no buttons) to allow overlaying game elements.
+
+Fully opaque background, no transparency. No text, no logo, no watermark, no characters, no vehicles, no UI elements. Warm, gentle, calming atmosphere suitable for toddlers.
+```
+
+### 6-2. `wash_hose.webp` (300×300 WebP・透明背景)
+```text
+[Style Reference: wash_sponge.webp, wash_towel.webp]
+Cute flat cartoon illustration of a garden water hose for a toddler app icon, 300x300 canvas, transparent background, NANOBANANA style matching existing wash_sponge and wash_towel assets.
+
+A coiled blue garden hose (#3997C9 / #448AFF blue tones) with a yellow/gold nozzle tip (#FFD740), thick soft dark brown outlines (#4A3B32, approximately 8-10pt), simple rounded shapes. The hose is loosely coiled in a circular shape. The nozzle points slightly upward to the right with 2-3 small light blue water droplets (#65CFFF) coming out.
+
+The style must match: simple flat cartoon, thick rounded outlines in warm dark brown (#4A3B32), bright cheerful saturated colors, minimal detail, very clear silhouette readable at small sizes. Same visual weight and outline thickness as a rectangular sponge icon and a rectangular towel icon.
+
+Plain solid white background (to be removed for transparency), centered composition, no text, no logo, no frame, no card border, no watermark.
+```

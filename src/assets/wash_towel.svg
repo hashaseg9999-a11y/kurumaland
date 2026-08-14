@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- Ground Shadow -->
+  <ellipse cx="150" cy="242" rx="100" ry="9" fill="rgba(21, 51, 74, 0.16)" />
+
+  <!-- Towel Body -->
+  <rect x="50" y="66" width="200" height="164" rx="28" fill="#B3E5FC" stroke="#15334A" stroke-width="7"/>
+
+  <!-- Fold Lines -->
+  <path d="M 50 128 Q 150 110 250 128" fill="none" stroke="#FFFFFF" stroke-width="6" opacity="0.8"/>
+  <path d="M 50 152 Q 150 134 250 152" fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.6"/>
+
+  <!-- Corner Stitching -->
+  <path d="M 76 92 L 96 92 M 76 92 L 76 112" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 204 92 L 224 92 M 224 92 L 224 112" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Edge Hem -->
+  <rect x="50" y="198" width="200" height="32" rx="16" fill="#4FC3F7" stroke="#15334A" stroke-width="5"/>
+</svg>
