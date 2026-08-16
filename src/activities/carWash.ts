@@ -1,31 +1,49 @@
 import backgroundCarWash from '../assets/bg_car_wash.webp';
-import carClean from '../assets/car_red.svg';
+import carBlue from '../assets/car_blue.svg';
 import carDirty from '../assets/car_dirty.svg';
+import carGreen from '../assets/car_green.svg';
+import carRed from '../assets/car_red.svg';
+import carYellow from '../assets/car_yellow.svg';
 import menuIcon from '../assets/menu_car-wash.svg';
 import washFoam from '../assets/wash_foam.svg';
-import washSponge from '../assets/wash_sponge.svg';
 import washHose from '../assets/wash_hose.svg';
+import washSponge from '../assets/wash_sponge.svg';
 import washTowel from '../assets/wash_towel.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { getI18nText, type I18nKey } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
-
+import type { VocabKey } from '../core/vocab';
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
-const REQUIRED_COVERAGE = 0.68;
-const BRUSH_RADIUS = 82;
+const REQUIRED_COVERAGE = 0.65;
+const BRUSH_RADIUS = 86;
 const MAX_PIXEL_RATIO = 2;
 const TOOL_POINTER_OFFSET = 46;
 
-type WashStep = 0 | 1 | 2;
+type WashStep = 0 | 1 | 2; // 0: スポンジ泡, 1: シャワー水流, 2: タオル拭き・ワックス
 
 interface Point {
   x: number;
   y: number;
 }
 
-const TOOL_LABELS = ['スポンジ', 'ホース', 'タオル'] as const;
-const TOOL_VOCAB = ['sponge', 'water', 'towel'] as const;
+interface VehicleInfo {
+  clean: string;
+  dirty: string;
+  nameJa: string;
+  vocab: VocabKey;
+}
+
+const VEHICLES: readonly VehicleInfo[] = [
+  { clean: carRed, dirty: carDirty, nameJa: 'しょうぼうしゃ', vocab: 'fireTruck' },
+  { clean: carBlue, dirty: carDirty, nameJa: 'パトカー', vocab: 'policeCar' },
+  { clean: carYellow, dirty: carDirty, nameJa: 'ダンプカー', vocab: 'dumpTruck' },
+  { clean: carGreen, dirty: carDirty, nameJa: 'トラック', vocab: 'cargoTruck' },
+];
+
+const TOOL_LABELS = ['① スポンジ', '② シャワー', '③ タオル'] as const;
+const TOOL_VOCAB = ['sponge', 'water', 'clean'] as const;
 
 const WASH_STYLES = `
   .kl-wash {
@@ -45,12 +63,34 @@ const WASH_STYLES = `
     pointer-events: none;
   }
 
+  /* Status Guidance Banner */
+  .kl-wash__banner {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 26px;
+    border: 4px solid #ffffff;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 8px 20px rgb(21 51 74 / 16%);
+    font-size: clamp(15px, 2.2vw, 22px);
+    font-weight: 800;
+    color: #15334a;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
   .kl-wash__bay {
     position: absolute;
     z-index: 2;
-    top: clamp(46px, 7vh, 82px);
+    top: clamp(48px, 8vh, 88px);
     left: 50%;
-    width: min(62vw, 660px);
+    width: min(64vw, 680px);
     aspect-ratio: 4 / 3;
     transform: translateX(-50%);
     touch-action: none;
@@ -66,7 +106,7 @@ const WASH_STYLES = `
   }
 
   .kl-wash__visual {
-    filter: drop-shadow(0 15px 12px rgb(43 68 81 / 18%));
+    filter: drop-shadow(0 16px 14px rgb(43 68 81 / 20%));
     transform: translateX(0);
   }
 
@@ -94,11 +134,11 @@ const WASH_STYLES = `
     height: clamp(126px, 21vh, 168px);
     align-items: center;
     justify-content: center;
-    gap: clamp(32px, 7vw, 86px);
-    border: 4px solid rgb(57 89 107 / 10%);
+    gap: clamp(28px, 6vw, 76px);
+    border: 4px solid rgb(255 255 255 / 80%);
     border-radius: 38px;
-    background: rgb(255 255 255 / 91%);
-    box-shadow: 0 16px 32px rgb(44 79 99 / 16%);
+    background: rgb(255 255 255 / 92%);
+    box-shadow: 0 16px 36px rgb(44 79 99 / 20%);
   }
 
   .kl-wash__tool {
@@ -125,12 +165,12 @@ const WASH_STYLES = `
   .kl-wash__tool.is-active {
     border-color: #ffd15c;
     box-shadow:
-      0 0 0 9px rgb(255 221 105 / 28%),
-      0 10px 22px rgb(45 82 102 / 17%);
+      0 0 0 9px rgb(255 221 105 / 35%),
+      0 12px 24px rgb(45 82 102 / 20%);
     cursor: grab;
     opacity: 1;
-    transform: scale(1.06);
-    animation: kl-wash-tool-pulse 2.4s ease-in-out infinite;
+    transform: scale(1.08);
+    animation: kl-wash-tool-pulse 2.2s ease-in-out infinite;
   }
 
   .kl-wash__tool img {
@@ -143,8 +183,8 @@ const WASH_STYLES = `
     position: absolute;
     z-index: 8;
     display: none;
-    width: 112px;
-    height: 112px;
+    width: 116px;
+    height: 116px;
     place-items: center;
     pointer-events: none;
     transform: translate(-50%, -50%);
@@ -158,50 +198,18 @@ const WASH_STYLES = `
     width: 100%;
     height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 9px 8px rgb(27 62 83 / 24%));
+    filter: drop-shadow(0 12px 10px rgb(27 62 83 / 28%));
   }
 
   @keyframes kl-wash-tool-pulse {
-    0%,
-    100% {
-      transform: scale(1.04);
+    0%, 100% {
+      transform: scale(1.05);
     }
-
     50% {
-      transform: scale(1.09);
-    }
-  }
-
-  @media (max-height: 650px) and (orientation: landscape) {
-    .kl-wash__bay {
-      top: 38px;
-      width: min(55vw, 560px);
-    }
-
-    .kl-wash__tray {
-      height: 114px;
-      gap: clamp(22px, 5vw, 56px);
-    }
-
-    .kl-wash__tool {
-      width: 94px;
-      height: 94px;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .kl-wash__dirt-fallback,
-    .kl-wash__tool {
-      transition: none;
-    }
-
-    .kl-wash__tool.is-active {
-      animation: none;
+      transform: scale(1.12);
     }
   }
 `;
-
-
 
 class CarWashActivity implements Activity {
   readonly id = 'car-wash';
@@ -209,8 +217,10 @@ class CarWashActivity implements Activity {
 
   private context: ActivityContext | null = null;
   private wrapper: HTMLDivElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private carZone: HTMLDivElement | null = null;
   private carVisual: HTMLDivElement | null = null;
+  private cleanImageElement: HTMLImageElement | null = null;
   private dirtyFallback: HTMLImageElement | null = null;
   private dirtCanvas: HTMLCanvasElement | null = null;
   private foamCanvas: HTMLCanvasElement | null = null;
@@ -228,6 +238,7 @@ class CarWashActivity implements Activity {
   private readonly animations = new Set<Animation>();
   private particles: ParticleSystem | null = null;
   private step: WashStep = 0;
+  private vehicleIndex = 0;
   private coverage = new Set<number>();
   private activePointerId: number | null = null;
   private pointerCaptureOwner: HTMLElement | null = null;
@@ -239,18 +250,9 @@ class CarWashActivity implements Activity {
   private pixelRatio = 1;
 
   private readonly handleBayPointerDown = (event: PointerEvent): void => {
-    if (
-      event.button !== 0 ||
-      this.completing ||
-      this.activePointerId !== null
-    ) {
-      return;
-    }
-
+    if (event.button !== 0 || this.completing || this.activePointerId !== null) return;
     const button = this.toolButtons[this.step];
-    if (!button || !this.carZone) {
-      return;
-    }
+    if (!button || !this.carZone) return;
 
     event.preventDefault();
     this.beginPointer(event, this.carZone, button);
@@ -258,37 +260,25 @@ class CarWashActivity implements Activity {
 
   private readonly handleToolPointerDown = (event: PointerEvent): void => {
     const button = event.currentTarget;
-    if (!(button instanceof HTMLButtonElement) || event.button !== 0) {
-      return;
-    }
+    if (!(button instanceof HTMLButtonElement) || event.button !== 0) return;
 
     const toolIndex = Number(button.dataset.toolIndex);
-    if (!Number.isInteger(toolIndex) || toolIndex < 0 || toolIndex > 2) {
-      return;
-    }
+    if (!Number.isInteger(toolIndex) || toolIndex < 0 || toolIndex > 2) return;
 
     event.preventDefault();
-    if (this.completing) {
-      return;
-    }
+    if (this.completing) return;
 
     if (toolIndex !== this.step) {
       this.guideActiveTool();
       return;
     }
 
-    if (this.activePointerId !== null) {
-      return;
-    }
-
+    if (this.activePointerId !== null) return;
     this.beginPointer(event, button, button);
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (event.pointerId !== this.activePointerId || this.completing) {
-      return;
-    }
-
+    if (event.pointerId !== this.activePointerId || this.completing) return;
     event.preventDefault();
     this.positionFloatingTool(event);
     this.applyPointer(event);
@@ -314,29 +304,14 @@ class CarWashActivity implements Activity {
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = CANVAS_WIDTH;
     maskCanvas.height = CANVAS_HEIGHT;
-    const maskContext = maskCanvas.getContext('2d', {
-      willReadFrequently: true,
-    });
-    if (!maskContext) {
-      return;
-    }
+    const maskContext = maskCanvas.getContext('2d', { willReadFrequently: true });
+    if (!maskContext) return;
 
     maskContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    maskContext.drawImage(
-      this.cleanTexture,
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-    );
+    maskContext.drawImage(this.cleanTexture, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     this.maskCanvas = maskCanvas;
-    this.maskData = maskContext.getImageData(
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-    );
+    this.maskData = maskContext.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.coveragePoints = this.createCoveragePoints();
     this.layersReady = true;
     this.drawDirtyLayer();
@@ -349,10 +324,8 @@ class CarWashActivity implements Activity {
     this.unmount();
     this.context = context;
     this.abortController = new AbortController();
-    this.pixelRatio = Math.min(
-      MAX_PIXEL_RATIO,
-      Math.max(1, window.devicePixelRatio || 1),
-    );
+    this.vehicleIndex = 0;
+    this.pixelRatio = Math.min(MAX_PIXEL_RATIO, Math.max(1, window.devicePixelRatio || 1));
 
     const wrapper = document.createElement('div');
     wrapper.className = 'kl-wash';
@@ -366,6 +339,12 @@ class CarWashActivity implements Activity {
     background.alt = '';
     background.draggable = false;
 
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'kl-wash__banner';
+    banner.textContent = `🧼 ${getI18nText('carWashHintSponge', currentLang)}`;
+    this.banner = banner;
+
     const bay = document.createElement('div');
     bay.className = 'kl-wash__bay';
     bay.setAttribute('aria-label', 'くるまをこすって洗う');
@@ -373,15 +352,17 @@ class CarWashActivity implements Activity {
     const visual = document.createElement('div');
     visual.className = 'kl-wash__visual';
 
+    const vehicle = VEHICLES[0]!;
     const cleanImage = document.createElement('img');
     cleanImage.className = 'kl-wash__car kl-wash__clean';
-    cleanImage.src = carClean;
+    cleanImage.src = vehicle.clean;
     cleanImage.alt = '';
     cleanImage.draggable = false;
+    this.cleanImageElement = cleanImage;
 
     const dirtyImage = document.createElement('img');
     dirtyImage.className = 'kl-wash__car kl-wash__dirt-fallback';
-    dirtyImage.src = carDirty;
+    dirtyImage.src = vehicle.dirty;
     dirtyImage.alt = '';
     dirtyImage.draggable = false;
 
@@ -389,13 +370,7 @@ class CarWashActivity implements Activity {
     const foamCanvas = this.createCanvas('kl-wash__canvas kl-wash__foam');
     const effectCanvas = this.createCanvas('kl-wash__canvas kl-wash__effect');
 
-    visual.append(
-      cleanImage,
-      dirtyImage,
-      dirtCanvas,
-      foamCanvas,
-      effectCanvas,
-    );
+    visual.append(cleanImage, dirtyImage, dirtCanvas, foamCanvas, effectCanvas);
     bay.append(visual);
 
     const tray = document.createElement('div');
@@ -412,7 +387,7 @@ class CarWashActivity implements Activity {
     floatingTool.className = 'kl-wash__floating';
     floatingTool.setAttribute('aria-hidden', 'true');
 
-    wrapper.append(style, background, bay, tray, floatingTool);
+    wrapper.append(style, background, banner, bay, tray, floatingTool);
     context.root.replaceChildren(wrapper);
 
     this.wrapper = wrapper;
@@ -426,56 +401,18 @@ class CarWashActivity implements Activity {
     this.toolButtons = [spongeButton, hoseButton, towelButton];
     this.particles = new ParticleSystem(wrapper);
 
-    const cleanTexture = new Image();
-    cleanTexture.src = carClean;
-    const dirtyTexture = new Image();
-    dirtyTexture.src = carDirty;
-    const foamTexture = new Image();
-    foamTexture.src = washFoam;
-    this.cleanTexture = cleanTexture;
-    this.dirtyTexture = dirtyTexture;
-    this.foamTexture = foamTexture;
+    this.loadVehicleTextures(vehicle);
 
-    const listenerOptions: AddEventListenerOptions = {
-      signal: this.abortController.signal,
-    };
-    cleanTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
-    dirtyTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
+    const listenerOptions: AddEventListenerOptions = { signal: this.abortController.signal };
     for (const button of this.toolButtons) {
-      button.addEventListener(
-        'pointerdown',
-        this.handleToolPointerDown,
-        listenerOptions,
-      );
+      button.addEventListener('pointerdown', this.handleToolPointerDown, listenerOptions);
     }
-    bay.addEventListener(
-      'pointerdown',
-      this.handleBayPointerDown,
-      listenerOptions,
-    );
-    wrapper.addEventListener(
-      'pointermove',
-      this.handlePointerMove,
-      listenerOptions,
-    );
-    wrapper.addEventListener(
-      'pointerup',
-      this.handlePointerEnd,
-      listenerOptions,
-    );
-    wrapper.addEventListener(
-      'pointercancel',
-      this.handlePointerEnd,
-      listenerOptions,
-    );
-    wrapper.addEventListener(
-      'lostpointercapture',
-      this.handlePointerEnd,
-      listenerOptions,
-    );
+    bay.addEventListener('pointerdown', this.handleBayPointerDown, listenerOptions);
+    wrapper.addEventListener('pointermove', this.handlePointerMove, listenerOptions);
+    wrapper.addEventListener('pointerup', this.handlePointerEnd, listenerOptions);
+    wrapper.addEventListener('pointercancel', this.handlePointerEnd, listenerOptions);
 
     this.resetRound(false);
-    this.tryInitializeLayers();
   }
 
   unmount(): void {
@@ -501,9 +438,11 @@ class CarWashActivity implements Activity {
 
     this.wrapper?.remove();
     this.context = null;
+    this.banner = null;
     this.wrapper = null;
     this.carZone = null;
     this.carVisual = null;
+    this.cleanImageElement = null;
     this.dirtyFallback = null;
     this.dirtCanvas = null;
     this.foamCanvas = null;
@@ -525,6 +464,29 @@ class CarWashActivity implements Activity {
     this.layersReady = false;
   }
 
+  private loadVehicleTextures(vehicle: VehicleInfo): void {
+    const cleanTexture = new Image();
+    cleanTexture.src = vehicle.clean;
+    const dirtyTexture = new Image();
+    dirtyTexture.src = vehicle.dirty;
+    const foamTexture = new Image();
+    foamTexture.src = washFoam;
+
+    this.cleanTexture = cleanTexture;
+    this.dirtyTexture = dirtyTexture;
+    this.foamTexture = foamTexture;
+
+    if (this.cleanImageElement) this.cleanImageElement.src = vehicle.clean;
+    if (this.dirtyFallback) this.dirtyFallback.src = vehicle.dirty;
+
+    const listenerOptions: AddEventListenerOptions = { signal: this.abortController?.signal };
+    cleanTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
+    dirtyTexture.addEventListener('load', this.tryInitializeLayers, listenerOptions);
+    if (cleanTexture.complete && dirtyTexture.complete) {
+      this.tryInitializeLayers();
+    }
+  }
+
   private createCanvas(className: string): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     canvas.className = className;
@@ -534,36 +496,21 @@ class CarWashActivity implements Activity {
     return canvas;
   }
 
-  private getContext(
-    canvas: HTMLCanvasElement | null,
-  ): CanvasRenderingContext2D | null {
+  private getContext(canvas: HTMLCanvasElement | null): CanvasRenderingContext2D | null {
     const context = canvas?.getContext('2d') ?? null;
-    context?.setTransform(
-      this.pixelRatio,
-      0,
-      0,
-      this.pixelRatio,
-      0,
-      0,
-    );
+    context?.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     return context;
   }
 
   private clearCanvas(canvas: HTMLCanvasElement | null): void {
     const context = this.getContext(canvas);
-    if (!context) {
-      return;
-    }
-
+    if (!context) return;
     context.globalAlpha = 1;
     context.globalCompositeOperation = 'source-over';
     context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 
-  private createToolButton(
-    index: WashStep,
-    imageSource: string,
-  ): HTMLButtonElement {
+  private createToolButton(index: WashStep, imageSource: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'kl-wash__tool';
@@ -579,11 +526,7 @@ class CarWashActivity implements Activity {
     return button;
   }
 
-  private beginPointer(
-    event: PointerEvent,
-    captureOwner: HTMLElement,
-    button: HTMLButtonElement,
-  ): void {
+  private beginPointer(event: PointerEvent, captureOwner: HTMLElement, button: HTMLButtonElement): void {
     this.activePointerId = event.pointerId;
     this.pointerCaptureOwner = captureOwner;
     this.lastStrokePoint = null;
@@ -596,39 +539,24 @@ class CarWashActivity implements Activity {
     this.applyPointer(event);
   }
 
-  private showFloatingTool(
-    button: HTMLButtonElement,
-    event: PointerEvent,
-  ): void {
-    if (!this.floatingTool) {
-      return;
-    }
-
+  private showFloatingTool(button: HTMLButtonElement, event: PointerEvent): void {
+    if (!this.floatingTool) return;
     const icon = button.firstElementChild?.cloneNode(true);
     this.floatingTool.replaceChildren();
-    if (icon) {
-      this.floatingTool.append(icon);
-    }
+    if (icon) this.floatingTool.append(icon);
     this.floatingTool.classList.add('is-visible');
     this.positionFloatingTool(event);
   }
 
   private positionFloatingTool(event: PointerEvent): void {
-    if (!this.wrapper || !this.floatingTool) {
-      return;
-    }
-
+    if (!this.wrapper || !this.floatingTool) return;
     const bounds = this.wrapper.getBoundingClientRect();
-    this.floatingTool.style.left =
-      String(event.clientX - bounds.left) + 'px';
-    this.floatingTool.style.top =
-      String(event.clientY - bounds.top - TOOL_POINTER_OFFSET) + 'px';
+    this.floatingTool.style.left = String(event.clientX - bounds.left) + 'px';
+    this.floatingTool.style.top = String(event.clientY - bounds.top - TOOL_POINTER_OFFSET) + 'px';
   }
 
   private applyPointer(event: PointerEvent): void {
-    if (!this.layersReady) {
-      return;
-    }
+    if (!this.layersReady) return;
 
     const point = this.toCanvasPoint(event);
     if (!point || !this.isPointOnCar(point)) {
@@ -638,7 +566,7 @@ class CarWashActivity implements Activity {
 
     const previous = this.lastStrokePoint ?? point;
     const distance = Math.hypot(point.x - previous.x, point.y - previous.y);
-    const stampSpacing = this.step === 0 ? 56 : 30;
+    const stampSpacing = this.step === 0 ? 54 : 28;
     const stampCount = Math.max(1, Math.ceil(distance / stampSpacing));
     let touched = false;
 
@@ -652,9 +580,7 @@ class CarWashActivity implements Activity {
         x: previous.x + (point.x - previous.x) * ratio,
         y: previous.y + (point.y - previous.y) * ratio,
       };
-      if (!this.isPointOnCar(stamp)) {
-        continue;
-      }
+      if (!this.isPointOnCar(stamp)) continue;
 
       touched = true;
       this.markCoverage(stamp);
@@ -688,37 +614,21 @@ class CarWashActivity implements Activity {
   }
 
   private toCanvasPoint(event: PointerEvent): Point | null {
-    if (!this.carZone) {
-      return null;
-    }
-
+    if (!this.carZone) return null;
     const bounds = this.carZone.getBoundingClientRect();
-    if (bounds.width <= 0 || bounds.height <= 0) {
-      return null;
-    }
+    if (bounds.width <= 0 || bounds.height <= 0) return null;
 
     const x = ((event.clientX - bounds.left) / bounds.width) * CANVAS_WIDTH;
     const y = ((event.clientY - bounds.top) / bounds.height) * CANVAS_HEIGHT;
-    if (x < 0 || x > CANVAS_WIDTH || y < 0 || y > CANVAS_HEIGHT) {
-      return null;
-    }
+    if (x < 0 || x > CANVAS_WIDTH || y < 0 || y > CANVAS_HEIGHT) return null;
 
     return { x, y };
   }
 
   private isPointOnCar(point: Point): boolean {
-    if (!this.maskData) {
-      return false;
-    }
-
-    const x = Math.min(
-      CANVAS_WIDTH - 1,
-      Math.max(0, Math.round(point.x)),
-    );
-    const y = Math.min(
-      CANVAS_HEIGHT - 1,
-      Math.max(0, Math.round(point.y)),
-    );
+    if (!this.maskData) return false;
+    const x = Math.min(CANVAS_WIDTH - 1, Math.max(0, Math.round(point.x)));
+    const y = Math.min(CANVAS_HEIGHT - 1, Math.max(0, Math.round(point.y)));
     const alphaIndex = (y * CANVAS_WIDTH + x) * 4 + 3;
     return (this.maskData.data[alphaIndex] ?? 0) > 18;
   }
@@ -746,10 +656,7 @@ class CarWashActivity implements Activity {
   private markCoverage(point: Point): void {
     for (let index = 0; index < this.coveragePoints.length; index += 1) {
       const target = this.coveragePoints[index];
-      if (
-        target &&
-        Math.hypot(point.x - target.x, point.y - target.y) <= BRUSH_RADIUS
-      ) {
+      if (target && Math.hypot(point.x - target.x, point.y - target.y) <= BRUSH_RADIUS) {
         this.coverage.add(index);
       }
     }
@@ -758,57 +665,44 @@ class CarWashActivity implements Activity {
   private drawFoam(point: Point): void {
     if (
       this.lastFoamStampPoint &&
-      Math.hypot(
-        point.x - this.lastFoamStampPoint.x,
-        point.y - this.lastFoamStampPoint.y,
-      ) < 104
+      Math.hypot(point.x - this.lastFoamStampPoint.x, point.y - this.lastFoamStampPoint.y) < 100
     ) {
       return;
     }
 
     const context = this.getContext(this.foamCanvas);
-    if (!context) {
-      return;
-    }
+    if (!context) return;
 
     context.globalCompositeOperation = 'source-over';
-    context.globalAlpha = 0.82;
+    context.globalAlpha = 0.85;
     const size = 96;
     if (this.foamTexture?.complete && this.foamTexture.naturalWidth > 0) {
-      context.drawImage(
-        this.foamTexture,
-        point.x - size / 2,
-        point.y - size / 2,
-        size,
-        size,
-      );
+      context.drawImage(this.foamTexture, point.x - size / 2, point.y - size / 2, size, size);
       context.globalAlpha = 1;
       this.lastFoamStampPoint = point;
       return;
     }
 
-    context.fillStyle = 'rgb(255 255 255 / 84%)';
+    context.fillStyle = 'rgb(255 255 255 / 88%)';
     context.beginPath();
-    context.arc(point.x - 22, point.y + 4, 26, 0, Math.PI * 2);
-    context.arc(point.x + 12, point.y - 10, 34, 0, Math.PI * 2);
-    context.arc(point.x + 34, point.y + 18, 23, 0, Math.PI * 2);
+    context.arc(point.x - 22, point.y + 4, 28, 0, Math.PI * 2);
+    context.arc(point.x + 12, point.y - 10, 36, 0, Math.PI * 2);
+    context.arc(point.x + 34, point.y + 18, 25, 0, Math.PI * 2);
     context.fill();
     context.globalAlpha = 1;
     this.lastFoamStampPoint = point;
   }
 
   private drawRinse(point: Point): void {
-    this.eraseAt(this.foamCanvas, point, 92);
-    this.eraseAt(this.dirtCanvas, point, 86);
+    this.eraseAt(this.foamCanvas, point, 96);
+    this.eraseAt(this.dirtCanvas, point, 90);
 
     const context = this.getContext(this.effectCanvas);
-    if (!context) {
-      return;
-    }
+    if (!context) return;
 
     context.globalCompositeOperation = 'source-over';
-    context.strokeStyle = 'rgb(70 184 239 / 62%)';
-    context.lineWidth = 10;
+    context.strokeStyle = 'rgb(70 184 239 / 65%)';
+    context.lineWidth = 12;
     context.lineCap = 'round';
     for (let index = 0; index < 4; index += 1) {
       const offsetX = -34 + index * 23;
@@ -820,19 +714,12 @@ class CarWashActivity implements Activity {
   }
 
   private drawWipe(point: Point): void {
-    this.eraseAt(this.effectCanvas, point, 104);
+    this.eraseAt(this.effectCanvas, point, 110);
   }
 
-  private eraseAt(
-    canvas: HTMLCanvasElement | null,
-    point: Point,
-    radius: number,
-  ): void {
+  private eraseAt(canvas: HTMLCanvasElement | null, point: Point, radius: number): void {
     const context = this.getContext(canvas);
-    if (!context) {
-      return;
-    }
-
+    if (!context) return;
     context.save();
     context.globalCompositeOperation = 'destination-out';
     context.fillStyle = '#000';
@@ -844,41 +731,30 @@ class CarWashActivity implements Activity {
 
   private clipCanvasToMask(canvas: HTMLCanvasElement | null): void {
     const context = this.getContext(canvas);
-    if (!context || !this.maskCanvas) {
-      return;
-    }
-
+    if (!context || !this.maskCanvas) return;
     context.save();
     context.globalCompositeOperation = 'destination-in';
-    context.drawImage(
-      this.maskCanvas,
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-    );
+    context.drawImage(this.maskCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     context.restore();
   }
 
   private playStrokeFeedback(): void {
-    if (!this.context) {
-      return;
-    }
-
+    if (!this.context) return;
     const now = performance.now();
-    if (this.step === 0 && now - this.lastSoundAt >= 320) {
-      this.context.sfx.play('pop');
+    if (this.step === 0 && now - this.lastSoundAt >= 200) {
+      this.context.sfx.play('bubble');
       this.lastSoundAt = now;
-    } else if (this.step === 1 && now - this.lastSoundAt >= 520) {
+    } else if (this.step === 1 && now - this.lastSoundAt >= 320) {
       this.context.sfx.play('water');
+      this.lastSoundAt = now;
+    } else if (this.step === 2 && now - this.lastSoundAt >= 260) {
+      this.context.sfx.play('wipe');
       this.lastSoundAt = now;
     }
   }
 
   private advanceStep(): void {
-    if (!this.context || this.completing) {
-      return;
-    }
+    if (!this.context || this.completing) return;
 
     if (this.activePointerId !== null) {
       this.endDrag(this.activePointerId);
@@ -900,7 +776,7 @@ class CarWashActivity implements Activity {
       this.clearCanvas(this.dirtCanvas);
       this.clearCanvas(this.foamCanvas);
       this.prepareWetLayer();
-      this.context.speech.speak('towel');
+      this.context.speech.speak('clean');
       this.updateToolState();
       return;
     }
@@ -910,20 +786,12 @@ class CarWashActivity implements Activity {
 
   private prepareWetLayer(): void {
     const context = this.getContext(this.effectCanvas);
-    if (!context || !this.cleanTexture) {
-      return;
-    }
+    if (!context || !this.cleanTexture) return;
 
     this.clearCanvas(this.effectCanvas);
     context.globalCompositeOperation = 'source-over';
     context.globalAlpha = 1;
-    context.drawImage(
-      this.cleanTexture,
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-    );
+    context.drawImage(this.cleanTexture, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     context.globalCompositeOperation = 'source-in';
     context.fillStyle = 'rgb(76 188 239 / 24%)';
     context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -931,77 +799,82 @@ class CarWashActivity implements Activity {
   }
 
   private completeWash(): void {
-    if (!this.context || !this.carVisual) {
-      return;
-    }
+    if (!this.context || !this.carVisual) return;
 
     this.completing = true;
     this.clearCanvas(this.dirtCanvas);
     this.clearCanvas(this.foamCanvas);
     this.clearCanvas(this.effectCanvas);
-    this.context.sfx.play('chime');
+    this.context.sfx.play('fanfare');
     this.context.speech.speak('clean');
     this.context.notifyTaskComplete();
 
-    this.sparkleAtCar();
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      this.setTimer(() => this.resetRound(true), 900);
-      return;
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🎉 ${getI18nText('carWashClean', currentLang)}`;
     }
 
-    const bounce = this.carVisual.animate(
-      [
-        { transform: 'translateY(0) scale(1)' },
-        { transform: 'translateY(-10px) scale(1.035)' },
-        { transform: 'translateY(0) scale(1)' },
-      ],
-      { duration: 520, easing: 'ease-out' },
-    );
-    this.trackAnimation(bounce);
+    this.sparkleAtCar();
+
+    if (this.particles && this.wrapper) {
+      const rect = this.wrapper.getBoundingClientRect();
+      this.particles.emitCelebration(rect.width / 2, rect.height * 0.4);
+      this.particles.emitFlowers(rect.width / 2, rect.height * 0.4, 12);
+    }
+
+    this.carVisual.classList.add('car-jumping');
 
     this.setTimer(() => {
       this.context?.sfx.play('applause');
       this.context?.speech.speak('wellDone');
-    }, 560);
+    }, 600);
 
     this.setTimer(() => {
       if (!this.carVisual) {
+        this.resetRound(true);
         return;
       }
+
+      this.carVisual.classList.remove('car-jumping');
+      this.context?.sfx.play('engine');
 
       const leaving = this.carVisual.animate(
         [
           { transform: 'translateX(0)' },
           { transform: 'translateX(118vw)' },
         ],
-        { duration: 1050, easing: 'ease-in', fill: 'forwards' },
+        { duration: 950, easing: 'cubic-bezier(0.45, 0, 0.55, 1)', fill: 'forwards' },
       );
       this.trackAnimation(leaving);
+
       leaving.addEventListener(
         'finish',
         () => {
-          if (!this.carVisual || !this.context) {
-            return;
-          }
+          if (!this.carVisual || !this.context) return;
 
           leaving.cancel();
+          this.vehicleIndex = (this.vehicleIndex + 1) % VEHICLES.length;
+          const nextVehicle = VEHICLES[this.vehicleIndex]!;
+          this.loadVehicleTextures(nextVehicle);
+
           this.resetRound(false);
           this.completing = true;
+
           const entering = this.carVisual.animate(
             [
               { transform: 'translateX(-118vw)' },
+              { transform: 'translateX(12px)', offset: 0.85 },
               { transform: 'translateX(0)' },
             ],
-            { duration: 1050, easing: 'ease-out' },
+            { duration: 950, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' },
           );
           this.trackAnimation(entering);
+
           entering.addEventListener(
             'finish',
             () => {
-              if (!this.context) {
-                return;
-              }
+              entering.cancel();
+              if (!this.context) return;
               this.completing = false;
               this.context.speech.speak('sponge');
             },
@@ -1010,25 +883,22 @@ class CarWashActivity implements Activity {
         },
         { once: true },
       );
-    }, 1100);
+    }, 1400);
   }
 
   private sparkleAtCar(): void {
-    if (!this.particles || !this.carZone || !this.wrapper) {
-      return;
-    }
-
+    if (!this.particles || !this.carZone || !this.wrapper) return;
     const wrapperRect = this.wrapper.getBoundingClientRect();
     const bayRect = this.carZone.getBoundingClientRect();
     this.particles.emitBubbles(
       bayRect.left - wrapperRect.left + bayRect.width / 2,
       bayRect.top - wrapperRect.top + bayRect.height / 2,
-      14,
+      16,
     );
     this.particles.emitSparkles(
       bayRect.left - wrapperRect.left + bayRect.width / 2,
       bayRect.top - wrapperRect.top + bayRect.height / 2,
-      10,
+      16,
       '#4fc3f7',
     );
   }
@@ -1046,9 +916,7 @@ class CarWashActivity implements Activity {
 
     if (this.layersReady) {
       this.drawDirtyLayer();
-      if (this.dirtyFallback) {
-        this.dirtyFallback.style.opacity = '0';
-      }
+      if (this.dirtyFallback) this.dirtyFallback.style.opacity = '0';
     } else if (this.dirtyFallback) {
       this.dirtyFallback.style.opacity = '1';
     }
@@ -1061,20 +929,11 @@ class CarWashActivity implements Activity {
 
   private drawDirtyLayer(): void {
     const context = this.getContext(this.dirtCanvas);
-    if (!context || !this.dirtyTexture) {
-      return;
-    }
-
+    if (!context || !this.dirtyTexture) return;
     this.clearCanvas(this.dirtCanvas);
     context.globalCompositeOperation = 'source-over';
     context.globalAlpha = 1;
-    context.drawImage(
-      this.dirtyTexture,
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-    );
+    context.drawImage(this.dirtyTexture, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 
   private updateToolState(): void {
@@ -1084,18 +943,24 @@ class CarWashActivity implements Activity {
       button.setAttribute('aria-pressed', String(active));
       button.setAttribute('aria-disabled', String(!active));
     });
+
+    if (this.banner && this.context) {
+      const currentLang = this.context.speech.getLanguage();
+      const hintKeys: I18nKey[] = ['carWashHintSponge', 'carWashHintShower', 'carWashHintTowel'];
+      const currentHintKey = hintKeys[this.step] ?? 'carWashHintSponge';
+      const icons = ['🧼', '🚿', '✨'];
+      this.banner.textContent = `${icons[this.step] ?? '✨'} ${getI18nText(currentHintKey, currentLang)}`;
+    }
   }
 
   private guideActiveTool(): void {
     const button = this.toolButtons[this.step];
-    if (!button) {
-      return;
-    }
+    if (!button) return;
 
     const animation = button.animate(
       [
         { transform: 'scale(1.04)' },
-        { transform: 'scale(1.12)' },
+        { transform: 'scale(1.14)' },
         { transform: 'scale(1.04)' },
       ],
       { duration: 360, easing: 'ease-out' },
@@ -1105,15 +970,10 @@ class CarWashActivity implements Activity {
   }
 
   private endDrag(pointerId: number): void {
-    if (
-      this.pointerCaptureOwner &&
-      this.pointerCaptureOwner.hasPointerCapture(pointerId)
-    ) {
+    if (this.pointerCaptureOwner && this.pointerCaptureOwner.hasPointerCapture(pointerId)) {
       try {
         this.pointerCaptureOwner.releasePointerCapture(pointerId);
-      } catch {
-        // Safari may release capture before pointercancel reaches the wrapper.
-      }
+      } catch {}
     }
 
     this.activePointerId = null;
@@ -1124,9 +984,7 @@ class CarWashActivity implements Activity {
 
     if (this.step === 1) {
       this.setTimer(() => {
-        if (this.step === 1) {
-          this.clearCanvas(this.effectCanvas);
-        }
+        if (this.step === 1) this.clearCanvas(this.effectCanvas);
       }, 140);
     }
   }
@@ -1149,4 +1007,7 @@ class CarWashActivity implements Activity {
   }
 }
 
+export function createCarWashActivity(): Activity {
+  return new CarWashActivity();
+}
 export const carWashActivity: Activity = new CarWashActivity();

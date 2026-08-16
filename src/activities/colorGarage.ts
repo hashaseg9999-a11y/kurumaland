@@ -1,3 +1,4 @@
+import bgGarage from '../assets/bg_garage.webp';
 import carBlue from '../assets/car_blue.svg';
 import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
@@ -8,14 +9,20 @@ import garageRed from '../assets/garage_red.svg';
 import garageYellow from '../assets/garage_yellow.svg';
 import menuIcon from '../assets/menu_color-garage.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { getI18nText } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
+import type { VocabKey } from '../core/vocab';
 
 type ColorName = 'red' | 'blue' | 'yellow' | 'green';
 
 interface ColorItem {
   color: ColorName;
+  nameJa: string;
   car: string;
   garage: string;
+  carVocab: VocabKey;
+  garageVocab: VocabKey;
+  themeColor: string;
 }
 
 interface DragState {
@@ -30,10 +37,10 @@ interface DragState {
 }
 
 const COLOR_ITEMS: readonly ColorItem[] = [
-  { color: 'red', car: carRed, garage: garageRed },
-  { color: 'blue', car: carBlue, garage: garageBlue },
-  { color: 'yellow', car: carYellow, garage: garageYellow },
-  { color: 'green', car: carGreen, garage: garageGreen },
+  { color: 'red', nameJa: 'あか', car: carRed, garage: garageRed, carVocab: 'redCar', garageVocab: 'redGarage', themeColor: '#ff5252' },
+  { color: 'blue', nameJa: 'あお', car: carBlue, garage: garageBlue, carVocab: 'blueCar', garageVocab: 'blueGarage', themeColor: '#448aff' },
+  { color: 'yellow', nameJa: 'きいろ', car: carYellow, garage: garageYellow, carVocab: 'yellowCar', garageVocab: 'yellowGarage', themeColor: '#ffd740' },
+  { color: 'green', nameJa: 'みどり', car: carGreen, garage: garageGreen, carVocab: 'greenCar', garageVocab: 'greenGarage', themeColor: '#69f0ae' },
 ];
 
 const STYLES = `
@@ -41,17 +48,37 @@ const STYLES = `
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1.05fr) minmax(0, 0.95fr);
-    gap: clamp(12px, 2vh, 24px);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(14px, 2.5vh, 28px);
     overflow: hidden;
     padding:
-      max(104px, calc(env(safe-area-inset-top) + 92px))
+      max(92px, calc(env(safe-area-inset-top) + 80px))
       max(28px, calc(env(safe-area-inset-right) + 22px))
       max(22px, calc(env(safe-area-inset-bottom) + 18px))
       max(28px, calc(env(safe-area-inset-left) + 22px));
-    background:
-      radial-gradient(circle at 50% 16%, rgb(255 255 255 / 80%), transparent 34%),
-      linear-gradient(#dff4ff 0 56%, #b8e7ad 56% 100%);
+    background: #dff4ff url("${bgGarage}") center / cover no-repeat;
+    touch-action: none;
+  }
+
+  /* Cognitive Banner */
+  .color-garage-activity__banner {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 26px;
+    border: 4px solid #ffffff;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 8px 20px rgb(21 51 74 / 16%);
+    font-size: clamp(16px, 2.2vw, 22px);
+    font-weight: 800;
+    color: #15334a;
+    pointer-events: none;
   }
 
   .color-garage-activity__row {
@@ -59,30 +86,89 @@ const STYLES = `
     grid-template-columns: repeat(var(--item-count), minmax(104px, 1fr));
     align-items: center;
     justify-items: center;
-    gap: clamp(12px, 3vw, 44px);
+    gap: clamp(14px, 3.5vw, 48px);
     min-height: 0;
   }
 
+  /* Garage Container & Animated Shutter */
   .color-garage-activity__garage {
     display: grid;
-    width: min(19vw, 238px);
+    position: relative;
+    width: min(21vw, 240px);
     min-width: 112px;
-    height: min(28vh, 218px);
+    height: min(29vh, 225px);
     min-height: 112px;
     place-items: center;
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 220ms ease;
+  }
+
+  .color-garage-activity__garage.is-target {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 24px rgba(255, 215, 0, 0.95)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
   }
 
   .color-garage-activity__garage img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 8px 14px rgb(21 51 74 / 18%));
   }
 
+  /* Shutter visual overlay on the garage */
+  .garage-shutter {
+    position: absolute;
+    bottom: 12%;
+    left: 20%;
+    width: 60%;
+    height: 52%;
+    border-radius: 8px 8px 0 0;
+    background: repeating-linear-gradient(180deg, #b0bec5 0 8px, #78909c 8px 16px);
+    border: 2px solid #546e7a;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform-origin: top center;
+    transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .color-garage-activity__garage.is-open .garage-shutter {
+    transform: scaleY(0.08);
+    opacity: 0.7;
+  }
+
+  .color-garage-activity__garage.is-parked .garage-shutter {
+    transform: scaleY(1);
+    opacity: 0.9;
+    border-color: #37474f;
+  }
+
+  /* Garage Roof Glow Light */
+  .garage-light {
+    position: absolute;
+    top: 6%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    opacity: 0.3;
+    transform: translateX(-50%);
+    transition: opacity 250ms ease, box-shadow 250ms ease;
+    pointer-events: none;
+  }
+
+  .color-garage-activity__garage.is-parked .garage-light {
+    opacity: 1;
+    background: #ffd700;
+    box-shadow: 0 0 20px #ffd700, 0 0 35px #ffb300;
+  }
+
+  /* Car Button */
   .color-garage-activity__car {
     z-index: 2;
-    width: min(18vw, 220px);
+    width: min(20vw, 230px);
     min-width: 104px;
-    height: min(20vh, 156px);
+    height: min(22vh, 165px);
     min-height: 104px;
     padding: 0;
     border: 0;
@@ -91,37 +177,25 @@ const STYLES = `
     touch-action: none;
     transform-origin: center;
     will-change: transform;
+    transition: transform 180ms ease, filter 180ms ease;
   }
 
   .color-garage-activity__car img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 8px 12px rgb(21 51 74 / 22%));
   }
 
   .color-garage-activity__car.is-dragging {
     z-index: 8;
     cursor: grabbing;
-    filter: drop-shadow(0 12px 10px rgb(21 51 74 / 20%));
+    filter: drop-shadow(0 18px 22px rgb(21 51 74 / 35%));
+    transform: scale(1.15);
   }
 
   .color-garage-activity__car.is-parked {
     pointer-events: none;
-  }
-
-  @media (max-height: 620px) and (orientation: landscape) {
-    .color-garage-activity {
-      padding-top: 88px;
-      gap: 8px;
-    }
-
-    .color-garage-activity__garage {
-      height: 25vh;
-    }
-
-    .color-garage-activity__car {
-      height: 18vh;
-    }
   }
 `;
 
@@ -137,22 +211,6 @@ function shuffle<T>(values: readonly T[]): T[] {
   return shuffled;
 }
 
-function isInsideExpandedTarget(
-  x: number,
-  y: number,
-  target: HTMLElement,
-): boolean {
-  const rect = target.getBoundingClientRect();
-  const horizontalPadding = rect.width * 0.25;
-  const verticalPadding = rect.height * 0.25;
-  return (
-    x >= rect.left - horizontalPadding &&
-    x <= rect.right + horizontalPadding &&
-    y >= rect.top - verticalPadding &&
-    y <= rect.bottom + verticalPadding
-  );
-}
-
 class ColorGarageActivity implements Activity {
   readonly id = 'color-garage';
   readonly menuIcon = menuIcon;
@@ -160,44 +218,47 @@ class ColorGarageActivity implements Activity {
   private context: ActivityContext | null = null;
   private root: HTMLElement | null = null;
   private board: HTMLElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private listeners: AbortController | null = null;
   private dragState: DragState | null = null;
   private readonly garages = new Map<ColorName, HTMLElement>();
-  private readonly animations = new Set<Animation>();
-  private readonly carAnimations = new Map<HTMLButtonElement, Animation>();
-  private readonly timers = new Set<number>();
+  private readonly cars = new Map<ColorName, HTMLButtonElement>();
   private particles: ParticleSystem | null = null;
   private colorCount = 2;
-  private correctStreak = 0;
   private parkedCount = 0;
   private roundFinishing = false;
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.context || this.dragState || this.roundFinishing) {
-      return;
-    }
-
+    if (!this.context || this.dragState || this.roundFinishing) return;
     const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
+    if (!(target instanceof Element)) return;
 
-    const button = target.closest<HTMLButtonElement>(
-      '.color-garage-activity__car',
-    );
-    if (!button || button.dataset.parked === 'true') {
-      return;
-    }
+    const button = target.closest<HTMLButtonElement>('.color-garage-activity__car');
+    if (!button || button.dataset.parked === 'true') return;
 
     const color = button.dataset.color as ColorName | undefined;
-    if (!color) {
-      return;
-    }
+    if (!color) return;
 
     event.preventDefault();
-    this.cancelCarAnimation(button);
     button.setPointerCapture(event.pointerId);
     button.classList.add('is-dragging');
+
+    const item = COLOR_ITEMS.find((c) => c.color === color);
+    if (item) {
+      this.context.speech.speak(item.carVocab);
+      if (this.banner) {
+        const currentLang = this.context.speech.getLanguage();
+        this.banner.textContent = `🚗 ${getI18nText('garageHint', currentLang)}`;
+      }
+    }
+    this.context.sfx.play('pop');
+
+    // 正しい車庫を開く
+    const correctGarage = this.garages.get(color);
+    if (correctGarage) {
+      correctGarage.classList.add('is-open');
+    }
+
     this.dragState = {
       pointerId: event.pointerId,
       button,
@@ -212,66 +273,83 @@ class ColorGarageActivity implements Activity {
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
     drag.deltaX = event.clientX - drag.startX;
     drag.deltaY = event.clientY - drag.startY;
     drag.moved ||= Math.hypot(drag.deltaX, drag.deltaY) > 12;
-    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.045)`;
+    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.15)`;
+
+    // 車庫のハイライト＆オープン判定
+    const carRect = drag.button.getBoundingClientRect();
+    const cX = carRect.left + carRect.width / 2;
+    const cY = carRect.top + carRect.height / 2;
+
+    this.garages.forEach((garageEl, gColor) => {
+      const gRect = garageEl.getBoundingClientRect();
+      const isInside =
+        cX >= gRect.left - 30 &&
+        cX <= gRect.right + 30 &&
+        cY >= gRect.top - 30 &&
+        cY <= gRect.bottom + 30;
+
+      if (isInside && gColor === drag.color) {
+        garageEl.classList.add('is-target', 'is-open');
+      } else {
+        garageEl.classList.remove('is-target');
+        if (gColor !== drag.color && garageEl.dataset.parked !== 'true') {
+          garageEl.classList.remove('is-open');
+        }
+      }
+    });
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
-    this.releasePointer(drag);
+    try {
+      drag.button.releasePointerCapture(drag.pointerId);
+    } catch {}
+    drag.button.classList.remove('is-dragging');
     this.dragState = null;
 
+    // ハイライトクリア
+    this.garages.forEach((g) => {
+      g.classList.remove('is-target');
+      if (g.dataset.parked !== 'true') {
+        g.classList.remove('is-open');
+      }
+    });
+
     if (!drag.moved) {
-      this.context?.speech.speak(drag.color);
-      this.bounceCar(drag);
+      drag.button.style.transform = '';
       return;
     }
 
     const carRect = drag.button.getBoundingClientRect();
-    const centerX = carRect.left + carRect.width / 2;
-    const centerY = carRect.top + carRect.height / 2;
+    const cX = carRect.left + carRect.width / 2;
+    const cY = carRect.top + carRect.height / 2;
     const correctGarage = this.garages.get(drag.color);
 
-    if (
-      correctGarage &&
-      isInsideExpandedTarget(centerX, centerY, correctGarage)
-    ) {
-      this.parkCar(drag, correctGarage);
-      return;
+    if (correctGarage) {
+      const gRect = correctGarage.getBoundingClientRect();
+      const isInsideCorrect =
+        cX >= gRect.left - 40 &&
+        cX <= gRect.right + 40 &&
+        cY >= gRect.top - 40 &&
+        cY <= gRect.bottom + 40;
+
+      if (isInsideCorrect) {
+        this.parkCar(drag, correctGarage);
+        return;
+      }
     }
 
-    const overWrongGarage = [...this.garages.entries()].some(
-      ([color, garage]) =>
-        color !== drag.color &&
-        isInsideExpandedTarget(centerX, centerY, garage),
-    );
-    if (overWrongGarage) {
-      this.correctStreak = 0;
-    }
-    this.returnCar(drag, overWrongGarage);
-  };
-
-  private readonly handlePointerCancel = (event: PointerEvent): void => {
-    const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this.releasePointer(drag);
-    this.dragState = null;
-    this.returnCar(drag, false);
+    // 不正解または枠外：ぷるぷる戻る
+    this.returnCar(drag);
   };
 
   mount(context: ActivityContext): void {
@@ -280,303 +358,209 @@ class ColorGarageActivity implements Activity {
     this.root = context.root;
     this.listeners = new AbortController();
     this.colorCount = 2;
-    this.correctStreak = 0;
+    this.roundFinishing = false;
+    this.parkedCount = 0;
 
     const style = document.createElement('style');
     style.textContent = STYLES;
 
     const board = document.createElement('div');
     board.className = 'color-garage-activity';
-    board.addEventListener('pointerdown', this.handlePointerDown, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointermove', this.handlePointerMove, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointerup', this.handlePointerUp, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointercancel', this.handlePointerCancel, {
-      signal: this.listeners.signal,
-    });
 
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'color-garage-activity__banner';
+    banner.textContent = `🎨 ${getI18nText('garageHint', currentLang)}`;
+    this.banner = banner;
+
+    board.append(banner);
     context.root.replaceChildren(style, board);
+
     this.board = board;
     this.particles = new ParticleSystem(board);
+
+    board.addEventListener('pointerdown', this.handlePointerDown, { signal: this.listeners.signal });
+    board.addEventListener('pointermove', this.handlePointerMove, { signal: this.listeners.signal });
+    board.addEventListener('pointerup', this.handlePointerUp, { signal: this.listeners.signal });
+    board.addEventListener('pointercancel', this.handlePointerUp, { signal: this.listeners.signal });
+
     this.startRound();
   }
 
   unmount(): void {
     this.listeners?.abort();
     this.listeners = null;
-    if (this.dragState) {
-      this.releasePointer(this.dragState);
-    }
-    this.dragState = null;
-    this.cancelAnimations();
     this.particles?.destroy();
     this.particles = null;
-    for (const timer of this.timers) {
-      window.clearTimeout(timer);
-    }
-    this.timers.clear();
     this.garages.clear();
-
+    this.cars.clear();
     this.root?.replaceChildren();
+    this.banner = null;
     this.board = null;
     this.root = null;
     this.context = null;
-    this.colorCount = 2;
-    this.correctStreak = 0;
-    this.parkedCount = 0;
+    this.dragState = null;
     this.roundFinishing = false;
   }
 
   private startRound(): void {
-    if (!this.board || !this.context) {
-      return;
-    }
-
-    this.cancelAnimations();
-    this.dragState = null;
+    if (!this.board || !this.context) return;
     this.garages.clear();
+    this.cars.clear();
     this.parkedCount = 0;
     this.roundFinishing = false;
 
-    const activeColors = COLOR_ITEMS.slice(0, this.colorCount);
-    const garageOrder = shuffle(activeColors);
-    const carOrder = shuffle(activeColors);
-    this.board.style.setProperty('--item-count', String(activeColors.length));
+    // バナーを残して子要素をリセット
+    const existingBanner = this.banner;
+    this.board.replaceChildren();
+    if (existingBanner) {
+      const currentLang = this.context.speech.getLanguage();
+      existingBanner.textContent = `🎨 ${getI18nText('garageHint', currentLang)}`;
+      this.board.append(existingBanner);
+    }
 
+    const selectedItems = COLOR_ITEMS.slice(0, this.colorCount);
+    const shuffledCars = shuffle(selectedItems);
+    const shuffledGarages = shuffle(selectedItems);
+
+    this.board.style.setProperty('--item-count', String(this.colorCount));
+
+    // 車庫行（上）
     const garageRow = document.createElement('div');
-    garageRow.className =
-      'color-garage-activity__row color-garage-activity__row--garages';
-    for (const item of garageOrder) {
-      const garage = document.createElement('div');
-      garage.className = 'color-garage-activity__garage';
-      garage.dataset.color = item.color;
+    garageRow.className = 'color-garage-activity__row';
+    shuffledGarages.forEach((item) => {
+      const garageEl = document.createElement('div');
+      garageEl.className = 'color-garage-activity__garage';
+      garageEl.dataset.color = item.color;
+      garageEl.dataset.parked = 'false';
 
-      const image = document.createElement('img');
-      image.src = item.garage;
-      image.alt = '';
-      image.draggable = false;
-      garage.append(image);
-      garageRow.append(garage);
-      this.garages.set(item.color, garage);
-    }
+      const img = document.createElement('img');
+      img.src = item.garage;
+      img.alt = '';
 
+      const shutter = document.createElement('div');
+      shutter.className = 'garage-shutter';
+
+      const light = document.createElement('div');
+      light.className = 'garage-light';
+
+      garageEl.append(img, shutter, light);
+      garageRow.append(garageEl);
+      this.garages.set(item.color, garageEl);
+    });
+
+    // 車行（下）
     const carRow = document.createElement('div');
-    carRow.className =
-      'color-garage-activity__row color-garage-activity__row--cars';
-    for (const item of carOrder) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'color-garage-activity__car';
-      button.dataset.color = item.color;
-      button.setAttribute('aria-label', item.color);
+    carRow.className = 'color-garage-activity__row';
+    shuffledCars.forEach((item) => {
+      const carBtn = document.createElement('button');
+      carBtn.type = 'button';
+      carBtn.className = 'color-garage-activity__car';
+      carBtn.dataset.color = item.color;
+      carBtn.dataset.parked = 'false';
 
-      const image = document.createElement('img');
-      image.src = item.car;
-      image.alt = '';
-      image.draggable = false;
-      button.append(image);
-      carRow.append(button);
-    }
+      const img = document.createElement('img');
+      img.src = item.car;
+      img.alt = '';
+      carBtn.append(img);
+      carRow.append(carBtn);
+      this.cars.set(item.color, carBtn);
+    });
 
-    this.board.replaceChildren(garageRow, carRow);
+    this.board.append(garageRow, carRow);
   }
 
   private parkCar(drag: DragState, garage: HTMLElement): void {
-    if (!this.context) {
-      return;
-    }
-
+    if (!this.context) return;
     drag.button.dataset.parked = 'true';
-    drag.button.classList.remove('is-dragging');
     drag.button.classList.add('is-parked');
+    garage.dataset.parked = 'true';
+    garage.classList.add('is-parked', 'is-open');
 
-    const originalRect = drag.button.getBoundingClientRect();
-    const garageRect = garage.getBoundingClientRect();
-    const currentTransform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.045)`;
-    const targetX =
-      garageRect.left + garageRect.width / 2 -
-      (originalRect.left - drag.deltaX + originalRect.width / 2);
-    const targetY =
-      garageRect.top + garageRect.height * 0.62 -
-      (originalRect.top - drag.deltaY + originalRect.height / 2);
-    const targetTransform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0.58)`;
+    const gRect = garage.getBoundingClientRect();
+    const cRect = drag.button.getBoundingClientRect();
+    const targetX = gRect.left + (gRect.width - cRect.width) / 2;
+    const targetY = gRect.top + gRect.height * 0.45;
 
-    const animation = drag.button.animate(
-      [
-        { transform: currentTransform, opacity: 1 },
-        { transform: targetTransform, opacity: 0.88 },
-      ],
-      { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
-    );
-    this.trackAnimation(animation, drag.button, () => {
-      drag.button.style.transform = targetTransform;
-      drag.button.style.opacity = '0.88';
-      animation.cancel();
-    });
+    const currentTranslateX = drag.deltaX;
+    const currentTranslateY = drag.deltaY;
+    const finalTranslateX = currentTranslateX + (targetX - cRect.left);
+    const finalTranslateY = currentTranslateY + (targetY - cRect.top);
 
     this.context.sfx.play('chime');
-    this.context.speech.speak(drag.color);
-    this.sparkleAt(garage);
-    this.correctStreak += 1;
-    if (this.correctStreak >= 3 && this.colorCount < COLOR_ITEMS.length) {
-      this.colorCount += 1;
-      this.correctStreak = 0;
+    const item = COLOR_ITEMS.find((c) => c.color === drag.color);
+    if (item) {
+      this.context.speech.speak(item.garageVocab);
+      if (this.banner) {
+        const currentLang = this.context.speech.getLanguage();
+        this.banner.textContent = `✨ ${getI18nText('garageMatch', currentLang)}`;
+      }
     }
 
-    this.parkedCount += 1;
-    if (this.parkedCount === this.garages.size) {
-      this.finishRound();
-    }
-  }
+    // 星エフェクト
+    this.particles?.emitStars(gRect.left + gRect.width / 2, gRect.top + gRect.height / 2, 16, [item?.themeColor ?? '#ffd700', '#ffffff']);
+    this.particles?.emitSparkles(gRect.left + gRect.width / 2, gRect.top + gRect.height / 2, 12);
 
-  private bounceCar(drag: DragState): void {
-    drag.button.classList.remove('is-dragging');
-    drag.button.style.transform = '';
-
-    const from = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0)`;
-    const animation = drag.button.animate(
+    const anim = drag.button.animate(
       [
-        { transform: `${from} scale(1)` },
-        {
-          transform: 'translate3d(0, 0, 0) scale(1.07)',
-          offset: 0.55,
-        },
-        { transform: 'translate3d(0, 0, 0) scale(1)' },
+        { transform: `translate3d(${currentTranslateX}px, ${currentTranslateY}px, 0) scale(1.15)` },
+        { transform: `translate3d(${finalTranslateX}px, ${finalTranslateY}px, 0) scale(0.85)` },
       ],
-      { duration: 320, easing: 'ease-out' },
+      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
     );
-    this.trackAnimation(animation, drag.button);
+
+    anim.onfinish = () => {
+      this.parkedCount++;
+      if (this.parkedCount >= this.colorCount) {
+        this.finishRound();
+      }
+    };
   }
 
-  private returnCar(drag: DragState, shake: boolean): void {
-    drag.button.classList.remove('is-dragging');
-    drag.button.style.transform = '';
+  private returnCar(drag: DragState): void {
+    if (!this.context) return;
+    this.context.sfx.play('pop');
 
-    const from = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0)`;
-    const keyframes: Keyframe[] = shake
-      ? [
-          { transform: `${from} rotate(0deg)` },
-          { transform: `${from} rotate(-4deg)`, offset: 0.2 },
-          { transform: `${from} rotate(4deg)`, offset: 0.38 },
-          { transform: `${from} rotate(-3deg)`, offset: 0.54 },
-          { transform: `${from} rotate(2deg)`, offset: 0.68 },
-          { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
-        ]
-      : [
-          { transform: from },
-          { transform: 'translate3d(0, 0, 0)' },
-        ];
-    const animation = drag.button.animate(keyframes, {
-      duration: shake ? 620 : 360,
-      easing: 'ease-out',
-    });
-    this.trackAnimation(animation, drag.button);
-  }
-
-  private sparkleAt(element: HTMLElement): void {
-    if (!this.particles || !this.board) {
-      return;
-    }
-
-    const boardRect = this.board.getBoundingClientRect();
-    const rect = element.getBoundingClientRect();
-    const color = element.dataset.color as ColorName | undefined;
-    const palette =
-      color === 'red'
-        ? ['#ff5252', '#ffd740']
-        : color === 'blue'
-          ? ['#448aff', '#ffd740']
-          : color === 'yellow'
-            ? ['#ffd740', '#fff176']
-            : ['#69f0ae', '#ffd740'];
-    this.particles.emitSparkles(
-      rect.left - boardRect.left + rect.width / 2,
-      rect.top - boardRect.top + rect.height / 2,
-      10,
-      palette[0],
+    drag.button.animate(
+      [
+        { transform: `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) rotate(6deg)` },
+        { transform: `translate3d(${drag.deltaX * 0.5}px, ${drag.deltaY * 0.5}px, 0) rotate(-6deg)`, offset: 0.5 },
+        { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+      ],
+      { duration: 380, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
     );
   }
 
   private finishRound(): void {
-    if (!this.context || this.roundFinishing) {
-      return;
-    }
-
+    if (!this.context || !this.board || this.roundFinishing) return;
     this.roundFinishing = true;
+
     this.context.notifyTaskComplete();
-    this.schedule(() => {
-      if (!this.context) {
-        return;
-      }
-      this.context.sfx.play('applause');
-      this.context.speech.speak('wellDone');
-    }, 1_200);
-    this.schedule(() => this.startRound(), 2_200);
-  }
+    this.context.sfx.play('fanfare');
+    this.context.speech.speak('great');
 
-  private releasePointer(drag: DragState): void {
-    if (drag.button.hasPointerCapture(drag.pointerId)) {
-      drag.button.releasePointerCapture(drag.pointerId);
-    }
-  }
-
-  private trackAnimation(
-    animation: Animation,
-    button: HTMLButtonElement,
-    onFinish?: () => void,
-  ): void {
-    this.animations.add(animation);
-    this.carAnimations.set(button, animation);
-    animation.onfinish = () => {
-      this.animations.delete(animation);
-      if (this.carAnimations.get(button) === animation) {
-        this.carAnimations.delete(button);
-      }
-      onFinish?.();
-    };
-    animation.oncancel = () => {
-      this.animations.delete(animation);
-      if (this.carAnimations.get(button) === animation) {
-        this.carAnimations.delete(button);
-      }
-    };
-  }
-
-  private cancelCarAnimation(button: HTMLButtonElement): void {
-    const animation = this.carAnimations.get(button);
-    if (!animation) {
-      return;
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🎉 ${getI18nText('garageAllParked', currentLang)}`;
     }
 
-    animation.onfinish = null;
-    animation.oncancel = null;
-    animation.cancel();
-    this.animations.delete(animation);
-    this.carAnimations.delete(button);
-  }
+    this.particles?.emitCelebration(this.board.clientWidth / 2, this.board.clientHeight * 0.45);
+    this.particles?.emitFlowers(this.board.clientWidth / 2, this.board.clientHeight * 0.45, 12);
 
-  private cancelAnimations(): void {
-    for (const animation of this.animations) {
-      animation.onfinish = null;
-      animation.oncancel = null;
-      animation.cancel();
-    }
-    this.animations.clear();
-    this.carAnimations.clear();
-  }
+    // 全車の一斉ジャンプ＆クラクション
+    this.cars.forEach((carBtn) => {
+      carBtn.classList.add('car-jumping');
+    });
 
-  private schedule(callback: () => void, delay: number): void {
-    const timer = window.setTimeout(() => {
-      this.timers.delete(timer);
-      callback();
-    }, delay);
-    this.timers.add(timer);
+    window.setTimeout(() => {
+      if (!this.context) return;
+      this.colorCount = this.colorCount === 2 ? 3 : this.colorCount === 3 ? 4 : 2;
+      this.startRound();
+    }, 2200);
   }
 }
 
+export function createColorGarageActivity(): Activity {
+  return new ColorGarageActivity();
+}
 export const colorGarageActivity: Activity = new ColorGarageActivity();

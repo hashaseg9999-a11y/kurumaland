@@ -8,6 +8,7 @@ export type { VocabKey } from './vocab';
 export interface SpeechService {
   speak(key: VocabKey): void;
   unlock(): void;
+  getLanguage(): Lang;
 }
 
 const ROTATING_LANGUAGES = ['ja', 'en', 'th'] as const satisfies readonly Lang[];
@@ -71,15 +72,11 @@ class WebSpeechService implements SpeechService {
     this.refreshVoices();
     const voice = this.findVoice(languageTag);
 
-    // タイ語を別言語のボイスで読ませず、対応ボイスがない端末では無音にする。
-    if (lang === 'th' && !voice) {
-      return;
-    }
-
     try {
       const utterance = new SpeechSynthesisUtterance(words[lang]);
       utterance.lang = languageTag;
       utterance.rate = SPEECH_RATE;
+      utterance.pitch = 1.15;
       if (voice) {
         utterance.voice = voice;
       }
@@ -87,6 +84,14 @@ class WebSpeechService implements SpeechService {
     } catch {
       // 音声APIが不安定な環境でも、遊び自体は止めない。
     }
+  }
+
+  getLanguage(): Lang {
+    const mode = this.settings.langMode;
+    if (mode !== 'rotate') {
+      return mode;
+    }
+    return ROTATING_LANGUAGES[this.rotateIndex] ?? 'ja';
   }
 
   unlock(): void {

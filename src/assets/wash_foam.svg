@@ -1,6 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
-  <circle cx="108" cy="138" r="55" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
-  <circle cx="184" cy="118" r="66" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <!-- Cloud-like Soap Foam Cluster -->
+  <circle cx="150" cy="142" r="64" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <circle cx="104" cy="154" r="48" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <circle cx="196" cy="154" r="48" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="152" cy="196" r="50" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="88" cy="204" r="40" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="214" cy="186" r="44" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>

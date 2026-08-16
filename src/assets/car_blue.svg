@@ -10,7 +10,7 @@
     <rect x="98" y="23" width="12" height="5" fill="#CED4DA" stroke="#15334A" stroke-width="2"/>
 
     <!-- Police Car Roof Curve (White) -->
-    <path d="M 48 42 L 65 24 L 135 24 C 150 24 160 33 166 42 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M 48 44 L 65 22 L 140 22 C 155 22 166 32 172 44 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
 
     <!-- Lower Body Base (Black) -->
     <path d="M 22 42 C 22 42 22 92 36 92 L 180 92 C 188 92 188 72 186 60 C 184 50 174 42 166 42 Z" fill="#1A1A1E" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
@@ -20,21 +20,54 @@
     <line x1="22" y1="60" x2="182" y2="60" stroke="#15334A" stroke-width="3"/>
 
     <!-- Rear Window & Front Windshield -->
-    <rect x="62" y="28" width="32" height="16" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
-    <path d="M 98 28 L 132 28 C 140 28 146 32 150 40 L 152 44 L 98 44 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <rect x="62" y="27" width="28" height="18" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 98 25 L 140 25 C 150 25 158 32 162 42 L 164 50 L 98 50 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
 
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <ellipse cx="128" cy="36" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <ellipse cx="130" cy="36" rx="5" ry="6.5" fill="#152B3C"/>
-    <circle cx="128" cy="32" r="2.6" fill="#FFFFFF"/>
-    <circle cx="132" cy="39" r="1.2" fill="#FFFFFF"/>
-    <path d="M 118 22 Q 128 18 138 23" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    
+    <!-- CUTE PERSPECTIVE DUAL EYES & BLUSH -->
+    <!-- Rear Eye (Secondary Eye) -->
+    <ellipse cx="125.1" cy="36" rx="6.825" ry="9.450000000000001" fill="#FFFFFF" stroke="#15334A" stroke-width="2"/>
+    <ellipse cx="126.15" cy="36" rx="4.41" ry="6.510000000000001" fill="#152438"/>
+    <!-- Rear Eye Iris Glow -->
+    <path d="M 123 38 Q 126.15 41.2 129.3 38" fill="none" stroke="#38BDF8" stroke-width="1.5750000000000002" stroke-linecap="round" opacity="0.9"/>
+    <!-- Rear Eye Highlights -->
+    <ellipse cx="124.05" cy="32.8" rx="2.3100000000000005" ry="2.7300000000000004" fill="#FFFFFF"/>
+    <circle cx="128.25" cy="38.05" r="1.05" fill="#FFFFFF"/>
+    <!-- Rear Brow -->
+    <path d="M 119.85 23.35 Q 126.15 20.2 132.45 24.4" fill="none" stroke="#15334A" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Front Eye (Main Big Sparkling Eye) -->
+    <ellipse cx="144" cy="37" rx="11.025" ry="14.175" fill="#FFFFFF" stroke="#15334A" stroke-width="2.6"/>
+    <!-- Main Pupil (Dark Navy) -->
+    <ellipse cx="145.26" cy="37" rx="7.5600000000000005" ry="10.290000000000001" fill="#152438"/>
+    <!-- Bottom Iris Glow -->
+    <path d="M 140.325 40.15 Q 145.575 44.875 150.825 40.15" fill="none" stroke="#38BDF8" stroke-width="2.3100000000000005" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 141.9 42.25 Q 145.575 45.925 149.25 42.25" fill="none" stroke="#7DD3FC" stroke-width="1.26" stroke-linecap="round" opacity="0.9"/>
+    
+    <!-- Big Main Catchlight (Sparkle 1) -->
+    <ellipse cx="142.11" cy="32.275" rx="3.7800000000000002" ry="4.41" fill="#FFFFFF"/>
+    <!-- Sub Catchlight (Sparkle 2) -->
+    <circle cx="148.725" cy="40.675" r="1.8900000000000001" fill="#FFFFFF"/>
+    <!-- Tiny Star Glint (Sparkle 3) -->
+    <circle cx="149.04" cy="33.64" r="1.26" fill="#FFFFFF" opacity="0.95"/>
+
+    <!-- Cute Eyelash & Brow -->
+    <path d="M 135.6 25.45 Q 146.1 21.25 155.55 26.5" fill="none" stroke="#15334A" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M 136.65 19.15 Q 146.1 14.95 154.5 20.2" fill="none" stroke="#15334A" stroke-width="2.6" stroke-linecap="round"/>
+
+    <!-- Soft Pink Blush Cheek (チーク) -->
+    <ellipse cx="154" cy="60" rx="7.5" ry="4.5" fill="#FF6B8B" opacity="0.7"/>
+    <circle cx="151.5" cy="59" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Happy Open Smile Mouth -->
+    <path d="M 158 70 Q 166 82 176 71 Z" fill="#E63946" stroke="#15334A" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Tongue in Mouth -->
+    <path d="M 162 76 Q 167 81 172 76 Z" fill="#FF8DA1"/>
+  
 
     <!-- Gold Police Star Badge Emblem on Side Door -->
     <polygon points="98,66 100,72 106,72 101,76 103,82 98,78 93,82 95,76 90,72 96,72" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
-
-    <!-- Front Bumper & Friendly Smile -->
-    <path d="M 162 76 Q 168 82 174 76" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
 
     <!-- Cute Big Headlight -->
     <circle cx="178" cy="55" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>

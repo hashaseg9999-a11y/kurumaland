@@ -16,14 +16,50 @@
     <path d="M 108 24 L 152 24 C 162 24 170 32 174 44 L 176 92 L 108 92 Z" fill="#52B788" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
 
     <!-- Cabin Window -->
-    <path d="M 116 30 L 148 30 C 154 30 158 35 160 44 L 161 52 L 116 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 112 28 L 148 28 C 156 28 162 34 164 44 L 165 54 L 112 54 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
 
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <ellipse cx="138" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <ellipse cx="140" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
-    <circle cx="138" cy="37" r="2.6" fill="#FFFFFF"/>
-    <circle cx="142" cy="44" r="1.2" fill="#FFFFFF"/>
-    <path d="M 128 25 Q 138 21 148 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    
+    <!-- CUTE PERSPECTIVE DUAL EYES & BLUSH -->
+    <!-- Rear Eye (Secondary Eye) -->
+    <ellipse cx="125.1" cy="39" rx="6.825" ry="9.450000000000001" fill="#FFFFFF" stroke="#15334A" stroke-width="2"/>
+    <ellipse cx="126.15" cy="39" rx="4.41" ry="6.510000000000001" fill="#152438"/>
+    <!-- Rear Eye Iris Glow -->
+    <path d="M 123 41 Q 126.15 44.2 129.3 41" fill="none" stroke="#38BDF8" stroke-width="1.5750000000000002" stroke-linecap="round" opacity="0.9"/>
+    <!-- Rear Eye Highlights -->
+    <ellipse cx="124.05" cy="35.8" rx="2.3100000000000005" ry="2.7300000000000004" fill="#FFFFFF"/>
+    <circle cx="128.25" cy="41.05" r="1.05" fill="#FFFFFF"/>
+    <!-- Rear Brow -->
+    <path d="M 119.85 26.35 Q 126.15 23.2 132.45 27.4" fill="none" stroke="#15334A" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Front Eye (Main Big Sparkling Eye) -->
+    <ellipse cx="144" cy="40" rx="11.025" ry="14.175" fill="#FFFFFF" stroke="#15334A" stroke-width="2.6"/>
+    <!-- Main Pupil (Dark Navy) -->
+    <ellipse cx="145.26" cy="40" rx="7.5600000000000005" ry="10.290000000000001" fill="#152438"/>
+    <!-- Bottom Iris Glow -->
+    <path d="M 140.325 43.15 Q 145.575 47.875 150.825 43.15" fill="none" stroke="#38BDF8" stroke-width="2.3100000000000005" stroke-linecap="round" opacity="0.95"/>
+    <path d="M 141.9 45.25 Q 145.575 48.925 149.25 45.25" fill="none" stroke="#7DD3FC" stroke-width="1.26" stroke-linecap="round" opacity="0.9"/>
+    
+    <!-- Big Main Catchlight (Sparkle 1) -->
+    <ellipse cx="142.11" cy="35.275" rx="3.7800000000000002" ry="4.41" fill="#FFFFFF"/>
+    <!-- Sub Catchlight (Sparkle 2) -->
+    <circle cx="148.725" cy="43.675" r="1.8900000000000001" fill="#FFFFFF"/>
+    <!-- Tiny Star Glint (Sparkle 3) -->
+    <circle cx="149.04" cy="36.64" r="1.26" fill="#FFFFFF" opacity="0.95"/>
+
+    <!-- Cute Eyelash & Brow -->
+    <path d="M 135.6 28.45 Q 146.1 24.25 155.55 29.5" fill="none" stroke="#15334A" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M 136.65 22.15 Q 146.1 17.95 154.5 23.2" fill="none" stroke="#15334A" stroke-width="2.6" stroke-linecap="round"/>
+
+    <!-- Soft Pink Blush Cheek (チーク) -->
+    <ellipse cx="154" cy="62" rx="7.5" ry="4.5" fill="#FF6B8B" opacity="0.7"/>
+    <circle cx="151.5" cy="61" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Happy Open Smile Mouth -->
+    <path d="M 158 72 Q 166 84 176 73 Z" fill="#E63946" stroke="#15334A" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Tongue in Mouth -->
+    <path d="M 162 78 Q 167 83 172 78 Z" fill="#FF8DA1"/>
+  
 
     <!-- Headlight -->
     <circle cx="174" cy="62" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
