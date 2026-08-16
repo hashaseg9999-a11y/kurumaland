@@ -1,13 +1,15 @@
+import bgPuzzle from '../assets/bg_puzzle.webp';
 import carBlue from '../assets/car_blue.svg';
 import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
 import carYellow from '../assets/car_yellow.svg';
 import menuIcon from '../assets/menu_puzzle.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { getI18nText } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
+import type { VocabKey } from '../core/vocab';
 
 type Difficulty = 2 | 3 | 4;
-type CarVocabKey = 'redCar' | 'blueCar' | 'yellowCar' | 'greenCar';
 
 interface Point {
   x: number;
@@ -31,11 +33,17 @@ interface PuzzlePiece {
   motion: Animation | null;
 }
 
-const VEHICLES: readonly { image: string; vocab: CarVocabKey }[] = [
-  { image: carRed, vocab: 'redCar' },
-  { image: carBlue, vocab: 'blueCar' },
-  { image: carYellow, vocab: 'yellowCar' },
-  { image: carGreen, vocab: 'greenCar' },
+interface VehicleInfo {
+  image: string;
+  nameJa: string;
+  vocab: VocabKey;
+}
+
+const VEHICLES: readonly VehicleInfo[] = [
+  { image: carRed, nameJa: 'しょうぼうしゃ', vocab: 'fireTruck' },
+  { image: carBlue, nameJa: 'パトカー', vocab: 'policeCar' },
+  { image: carYellow, nameJa: 'ダンプカー', vocab: 'dumpTruck' },
+  { image: carGreen, nameJa: 'トラック', vocab: 'cargoTruck' },
 ];
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -52,9 +60,7 @@ function shuffled<T>(items: readonly T[]): T[] {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     const current = result[index];
     const swap = result[swapIndex];
-    if (current === undefined || swap === undefined) {
-      continue;
-    }
+    if (current === undefined || swap === undefined) continue;
     result[index] = swap;
     result[swapIndex] = current;
   }
@@ -68,9 +74,9 @@ class PuzzleActivity implements Activity {
   private context: ActivityContext | null = null;
   private wrapper: HTMLDivElement | null = null;
   private board: HTMLDivElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private targetFrame: HTMLDivElement | null = null;
   private completionLayer: HTMLDivElement | null = null;
-  private eyelid: HTMLSpanElement | null = null;
   private abortController: AbortController | null = null;
   private loadingImage: HTMLImageElement | null = null;
   private readonly timers = new Set<number>();
@@ -100,9 +106,7 @@ class PuzzleActivity implements Activity {
 
     const pieceIndex = Number(event.target.dataset.pieceIndex);
     const piece = this.pieces[pieceIndex];
-    if (!Number.isInteger(pieceIndex) || !piece || piece.placed) {
-      return;
-    }
+    if (!Number.isInteger(pieceIndex) || !piece || piece.placed) return;
 
     event.preventDefault();
     piece.motion?.cancel();
@@ -115,8 +119,10 @@ class PuzzleActivity implements Activity {
     this.activePointerId = event.pointerId;
     this.activePieceIndex = pieceIndex;
     piece.element.style.zIndex = '12';
-    piece.element.style.transform = 'scale(1.035)';
+    piece.element.style.transform = 'scale(1.08)';
     piece.element.setPointerCapture(event.pointerId);
+
+    this.context?.sfx.play('pop');
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
@@ -129,9 +135,7 @@ class PuzzleActivity implements Activity {
     }
 
     const piece = this.pieces[this.activePieceIndex];
-    if (!piece) {
-      return;
-    }
+    if (!piece) return;
 
     event.preventDefault();
     const boardBounds = this.board.getBoundingClientRect();
@@ -142,10 +146,7 @@ class PuzzleActivity implements Activity {
   };
 
   private readonly handlePointerEnd = (event: PointerEvent): void => {
-    if (event.pointerId !== this.activePointerId) {
-      return;
-    }
-
+    if (event.pointerId !== this.activePointerId) return;
     this.finishDrag(event.pointerId);
   };
 
@@ -167,10 +168,29 @@ class PuzzleActivity implements Activity {
         position: absolute;
         inset: 0;
         overflow: hidden;
-        background:
-          radial-gradient(circle at 50% 45%, rgb(255 255 255 / 90%), transparent 34%),
-          linear-gradient(150deg, #dff5ff 0%, #eefbdc 100%);
+        background: #dff4ff url("${bgPuzzle}") center / cover no-repeat;
         touch-action: none;
+      }
+
+      .kl-puzzle__banner {
+        position: absolute;
+        top: max(16px, env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 26px;
+        border: 4px solid #ffffff;
+        border-radius: 30px;
+        background: rgb(255 255 255 / 94%);
+        box-shadow: 0 8px 20px rgb(21 51 74 / 16%);
+        font-size: clamp(15px, 2.2vw, 22px);
+        font-weight: 800;
+        color: #15334a;
+        pointer-events: none;
+        white-space: nowrap;
       }
 
       .kl-puzzle__board {
@@ -182,13 +202,13 @@ class PuzzleActivity implements Activity {
       .kl-puzzle__target,
       .kl-puzzle__completion {
         position: absolute;
-        border-radius: 24px;
+        border-radius: 28px;
       }
 
       .kl-puzzle__target {
-        border: 5px dashed rgb(55 105 130 / 28%);
-        background: rgb(255 255 255 / 52%);
-        box-shadow: inset 0 0 0 8px rgb(255 255 255 / 25%);
+        border: 5px dashed rgb(55 105 130 / 35%);
+        background: rgb(255 255 255 / 58%);
+        box-shadow: inset 0 0 0 10px rgb(255 255 255 / 35%);
         transition: opacity 240ms ease;
       }
 
@@ -204,7 +224,7 @@ class PuzzleActivity implements Activity {
       }
 
       .kl-puzzle__guide {
-        opacity: 0.16;
+        opacity: 0.22;
       }
 
       .kl-puzzle__piece {
@@ -212,13 +232,14 @@ class PuzzleActivity implements Activity {
         z-index: 3;
         min-width: 80px;
         min-height: 80px;
-        border: 3px solid rgb(53 85 103 / 24%);
-        border-radius: 16px;
-        background: rgb(255 255 255 / 34%);
-        box-shadow: 0 8px 18px rgb(33 72 93 / 16%);
+        border: 4px solid #ffffff;
+        border-radius: 22px;
+        background: rgb(255 255 255 / 75%);
+        box-shadow: 0 10px 22px rgb(33 72 93 / 22%);
         cursor: grab;
         touch-action: none;
         transform-origin: center;
+        transition: transform 180ms ease, box-shadow 180ms ease;
       }
 
       .kl-puzzle__piece.is-placed {
@@ -244,31 +265,19 @@ class PuzzleActivity implements Activity {
       .kl-puzzle__completion.is-visible {
         display: block;
       }
-
-      .kl-puzzle__eyelid {
-        position: absolute;
-        top: 49%;
-        left: 70.5%;
-        width: 7.5%;
-        height: 5%;
-        border-bottom: clamp(3px, 0.55vw, 7px) solid #49413d;
-        border-radius: 50%;
-        opacity: 0;
-        transform: rotate(-5deg);
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .kl-puzzle__target {
-          transition: none;
-        }
-      }
     `;
+
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'kl-puzzle__banner';
+    banner.textContent = `🧩 ${getI18nText('puzzleHint', currentLang)}`;
+    this.banner = banner;
 
     const board = document.createElement('div');
     board.className = 'kl-puzzle__board';
     board.setAttribute('aria-label', '車の絵を組み立てるパズル');
 
-    wrapper.append(style, board);
+    wrapper.append(style, banner, board);
     context.root.replaceChildren(wrapper);
     this.wrapper = wrapper;
     this.board = board;
@@ -279,7 +288,6 @@ class PuzzleActivity implements Activity {
     board.addEventListener('pointermove', this.handlePointerMove, listenerOptions);
     board.addEventListener('pointerup', this.handlePointerEnd, listenerOptions);
     board.addEventListener('pointercancel', this.handlePointerEnd, listenerOptions);
-    board.addEventListener('lostpointercapture', this.handlePointerEnd, listenerOptions);
 
     this.startRound();
   }
@@ -313,11 +321,11 @@ class PuzzleActivity implements Activity {
 
     this.wrapper?.remove();
     this.context = null;
+    this.banner = null;
     this.wrapper = null;
     this.board = null;
     this.targetFrame = null;
     this.completionLayer = null;
-    this.eyelid = null;
     this.loadingImage = null;
     this.pieces = [];
     this.targetRect = null;
@@ -327,9 +335,7 @@ class PuzzleActivity implements Activity {
   }
 
   private startRound(): void {
-    if (!this.board || !this.context) {
-      return;
-    }
+    if (!this.board || !this.context) return;
 
     for (const animation of this.animations) {
       animation.cancel();
@@ -340,7 +346,6 @@ class PuzzleActivity implements Activity {
     this.targetRect = null;
     this.targetFrame = null;
     this.completionLayer = null;
-    this.eyelid = null;
     this.completing = false;
     this.board.replaceChildren();
 
@@ -349,9 +354,11 @@ class PuzzleActivity implements Activity {
       this.loadingImage.onerror = null;
     }
 
-    const vehicle = VEHICLES[this.vehicleIndex];
-    if (!vehicle) {
-      return;
+    const vehicle = VEHICLES[this.vehicleIndex % VEHICLES.length]!;
+
+    if (this.banner && this.context) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🧩 ${getI18nText('puzzleBuild', currentLang)}`;
     }
 
     const generation = ++this.roundGeneration;
@@ -381,9 +388,7 @@ class PuzzleActivity implements Activity {
   }
 
   private buildPuzzle(image: HTMLImageElement): void {
-    if (!this.board) {
-      return;
-    }
+    if (!this.board) return;
 
     const boardWidth = this.board.clientWidth;
     const boardHeight = this.board.clientHeight;
@@ -431,14 +436,10 @@ class PuzzleActivity implements Activity {
     completeCar.setAttribute('aria-hidden', 'true');
     completeCar.getContext('2d')?.drawImage(image, 0, 0);
 
-    const eyelid = document.createElement('span');
-    eyelid.className = 'kl-puzzle__eyelid';
-    completion.append(completeCar, eyelid);
-
+    completion.append(completeCar);
     this.board.append(target, completion);
     this.targetFrame = target;
     this.completionLayer = completion;
-    this.eyelid = eyelid;
 
     const columns = this.difficulty === 4 ? 2 : this.difficulty;
     const rows = this.difficulty === 4 ? 2 : 1;
@@ -524,8 +525,7 @@ class PuzzleActivity implements Activity {
     const targetRight = target.x + target.width;
     const leftCenter = (target.x - pieceWidth) / 2;
     const rightCenter = targetRight + (boardWidth - targetRight - pieceWidth) / 2;
-    const clampedY = (value: number): number =>
-      clamp(value, minimumTop, maximumTop);
+    const clampedY = (value: number): number => clamp(value, minimumTop, maximumTop);
 
     if (difficulty === 2) {
       return [
@@ -534,11 +534,7 @@ class PuzzleActivity implements Activity {
           y: clampedY(target.y + jitter(22)),
         },
         {
-          x: clamp(
-            rightCenter + jitter(14),
-            targetRight + 8,
-            boardWidth - pieceWidth - margin,
-          ),
+          x: clamp(rightCenter + jitter(14), targetRight + 8, boardWidth - pieceWidth - margin),
           y: clampedY(target.y + jitter(22)),
         },
       ];
@@ -547,35 +543,16 @@ class PuzzleActivity implements Activity {
     if (difficulty === 3) {
       const gap = 12;
       const pairWidth = pieceWidth * 2 + gap;
-      const leftPairStart = clamp(
-        (target.x - pairWidth) / 2,
-        margin,
-        target.x - pairWidth - 6,
-      );
-      const rightPairStart = clamp(
-        targetRight + (boardWidth - targetRight - pairWidth) / 2,
-        targetRight + 6,
-        boardWidth - pairWidth - margin,
-      );
-      const singleLeft = clamp(
-        leftCenter,
-        margin,
-        target.x - pieceWidth - 6,
-      );
-      const singleRight = clamp(
-        rightCenter,
-        targetRight + 6,
-        boardWidth - pieceWidth - margin,
-      );
+      const leftPairStart = clamp((target.x - pairWidth) / 2, margin, target.x - pairWidth - 6);
+      const rightPairStart = clamp(targetRight + (boardWidth - targetRight - pairWidth) / 2, targetRight + 6, boardWidth - pairWidth - margin);
+      const singleLeft = clamp(leftCenter, margin, target.x - pieceWidth - 6);
+      const singleRight = clamp(rightCenter, targetRight + 6, boardWidth - pieceWidth - margin);
       const pairOnLeft = this.roundNumber % 2 === 0;
 
       if (pairOnLeft) {
         return [
           { x: leftPairStart, y: clampedY(target.y + jitter(16)) },
-          {
-            x: leftPairStart + pieceWidth + gap,
-            y: clampedY(target.y + jitter(16)),
-          },
+          { x: leftPairStart + pieceWidth + gap, y: clampedY(target.y + jitter(16)) },
           { x: singleRight, y: clampedY(target.y + jitter(20)) },
         ];
       }
@@ -583,23 +560,12 @@ class PuzzleActivity implements Activity {
       return [
         { x: singleLeft, y: clampedY(target.y + jitter(20)) },
         { x: rightPairStart, y: clampedY(target.y + jitter(16)) },
-        {
-          x: rightPairStart + pieceWidth + gap,
-          y: clampedY(target.y + jitter(16)),
-        },
+        { x: rightPairStart + pieceWidth + gap, y: clampedY(target.y + jitter(16)) },
       ];
     }
 
-    const leftX = clamp(
-      leftCenter + jitter(10),
-      margin,
-      target.x - pieceWidth - 8,
-    );
-    const rightX = clamp(
-      rightCenter + jitter(10),
-      targetRight + 8,
-      boardWidth - pieceWidth - margin,
-    );
+    const leftX = clamp(leftCenter + jitter(10), margin, target.x - pieceWidth - 8);
+    const rightX = clamp(rightCenter + jitter(10), targetRight + 8, boardWidth - pieceWidth - margin);
     const upperY = clampedY(target.y - 16 + jitter(10));
     const lowerY = clampedY(target.y + pieceHeight + 16 + jitter(10));
     return [
@@ -614,9 +580,7 @@ class PuzzleActivity implements Activity {
     const pieceIndex = this.activePieceIndex;
     const piece = pieceIndex === null ? undefined : this.pieces[pieceIndex];
     this.releaseActivePointer(pointerId);
-    if (!piece) {
-      return;
-    }
+    if (!piece) return;
 
     const currentX = Number.parseFloat(piece.element.style.left);
     const currentY = Number.parseFloat(piece.element.style.top);
@@ -635,11 +599,7 @@ class PuzzleActivity implements Activity {
     }
   }
 
-  private snapPiece(
-    piece: PuzzlePiece,
-    currentX: number,
-    currentY: number,
-  ): void {
+  private snapPiece(piece: PuzzlePiece, currentX: number, currentY: number): void {
     piece.placed = true;
     piece.element.classList.add('is-placed');
     piece.element.style.left = `${piece.targetX}px`;
@@ -648,53 +608,39 @@ class PuzzleActivity implements Activity {
     piece.element.style.transform = '';
     const animation = piece.element.animate(
       [
-        {
-          transform: `translate(${currentX - piece.targetX}px, ${currentY - piece.targetY}px) scale(1.035)`,
-        },
+        { transform: `translate(${currentX - piece.targetX}px, ${currentY - piece.targetY}px) scale(1.08)` },
         { transform: 'translate(0, 0) scale(1)' },
       ],
-      { duration: 250, easing: 'ease-out' },
+      { duration: 250, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
     );
     piece.motion = animation;
     this.trackPieceAnimation(piece, animation);
-    this.context?.sfx.play('pop');
+
+    this.context?.sfx.play('snap');
 
     if (this.pieces.every((candidate) => candidate.placed)) {
       this.schedule(() => this.completePuzzle(), 270);
     }
   }
 
-  private returnPiece(
-    piece: PuzzlePiece,
-    currentX: number,
-    currentY: number,
-  ): void {
+  private returnPiece(piece: PuzzlePiece, currentX: number, currentY: number): void {
     piece.element.style.left = `${piece.startX}px`;
     piece.element.style.top = `${piece.startY}px`;
     piece.element.style.zIndex = '3';
     piece.element.style.transform = '';
     const animation = piece.element.animate(
       [
-        {
-          transform: `translate(${currentX - piece.startX}px, ${currentY - piece.startY}px) scale(1.035)`,
-        },
+        { transform: `translate(${currentX - piece.startX}px, ${currentY - piece.startY}px) scale(1.08)` },
         { transform: 'translate(0, 0) scale(1)' },
       ],
-      { duration: 300, easing: 'ease-out' },
+      { duration: 320, easing: 'ease-out' },
     );
     piece.motion = animation;
     this.trackPieceAnimation(piece, animation);
   }
 
   private completePuzzle(): void {
-    if (this.completing || !this.context || !this.completionLayer) {
-      return;
-    }
-
-    const vehicle = VEHICLES[this.vehicleIndex];
-    if (!vehicle) {
-      return;
-    }
+    if (this.completing || !this.context || !this.completionLayer) return;
 
     this.completing = true;
     this.targetFrame?.classList.add('is-complete');
@@ -702,11 +648,22 @@ class PuzzleActivity implements Activity {
       piece.element.classList.add('is-hidden');
     }
     this.completionLayer.classList.add('is-visible');
-    this.context.sfx.play('chime');
-    this.context.speech.speak(vehicle.vocab);
+
+    this.context.sfx.play('fanfare');
+    this.context.speech.speak('completePuzzle');
     this.context.notifyTaskComplete();
 
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🎉 ${getI18nText('puzzleComplete', currentLang)}`;
+    }
+
     this.starsAtTarget();
+    if (this.particles && this.wrapper) {
+      const rect = this.wrapper.getBoundingClientRect();
+      this.particles.emitCelebration(rect.width / 2, rect.height / 2);
+      this.particles.emitFlowers(rect.width / 2, rect.height / 2, 12);
+    }
 
     this.completionsAtDifficulty += 1;
     if (this.difficulty === 2 && this.completionsAtDifficulty >= 3) {
@@ -717,65 +674,47 @@ class PuzzleActivity implements Activity {
       this.completionsAtDifficulty = 0;
     }
 
-    if (this.eyelid) {
-      const blinkAnimation = this.eyelid.animate(
-        [
-          { opacity: 0 },
-          { opacity: 1, offset: 0.18 },
-          { opacity: 0, offset: 0.34 },
-          { opacity: 0, offset: 0.58 },
-          { opacity: 1, offset: 0.72 },
-          { opacity: 0 },
-        ],
-        { duration: 760, easing: 'ease-in-out' },
-      );
-      this.trackAnimation(blinkAnimation);
-    }
-
-    const gentleBounce = this.completionLayer.animate(
+    const joyJump = this.completionLayer.animate(
       [
         { transform: 'translateY(0) scale(1)' },
-        { transform: 'translateY(-7px) scale(1.015)' },
+        { transform: 'translateY(-28px) scale(1.08)', offset: 0.45 },
         { transform: 'translateY(0) scale(1)' },
       ],
-      { duration: 520, easing: 'ease-out' },
+      { duration: 600, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
     );
-    this.trackAnimation(gentleBounce);
+    this.trackAnimation(joyJump);
 
     this.schedule(() => {
+      this.context?.sfx.play('engine');
       this.context?.speech.speak('wellDone');
-    }, 920);
+    }, 750);
 
     this.schedule(() => {
-      if (!this.completionLayer || !this.board || !this.targetRect) {
-        return;
-      }
-      const travel = this.board.clientWidth - this.targetRect.x + 60;
+      if (!this.completionLayer || !this.board || !this.targetRect) return;
+      const travel = this.board.clientWidth - this.targetRect.x + 120;
       const driveAnimation = this.completionLayer.animate(
         [
           { transform: 'translateX(0)' },
           { transform: `translateX(${travel}px)` },
         ],
         {
-          duration: 940,
-          easing: 'ease-in-out',
+          duration: 980,
+          easing: 'cubic-bezier(0.45, 0, 0.55, 1)',
           fill: 'forwards',
         },
       );
       this.trackAnimation(driveAnimation);
-    }, 960);
+    }, 1100);
 
     this.schedule(() => {
       this.vehicleIndex = (this.vehicleIndex + 1) % VEHICLES.length;
       this.roundNumber += 1;
       this.startRound();
-    }, 2_020);
+    }, 2200);
   }
 
   private starsAtTarget(): void {
-    if (!this.particles || !this.targetRect || !this.wrapper || !this.board) {
-      return;
-    }
+    if (!this.particles || !this.targetRect || !this.wrapper || !this.board) return;
 
     const wrapperRect = this.wrapper.getBoundingClientRect();
     const boardRect = this.board.getBoundingClientRect();
@@ -784,7 +723,7 @@ class PuzzleActivity implements Activity {
     this.particles.emitStars(
       offsetLeft + this.targetRect.width / 2,
       offsetTop + this.targetRect.height / 2,
-      14,
+      18,
       ['#ffd740', '#ff5252', '#448aff', '#69f0ae', '#ab47bc'],
     );
   }
@@ -803,17 +742,14 @@ class PuzzleActivity implements Activity {
   }
 
   private releaseActivePointer(pointerId: number): void {
-    const pieceIndex = this.activePieceIndex;
-    const piece = pieceIndex === null ? undefined : this.pieces[pieceIndex];
+    const piece = this.activePieceIndex === null ? undefined : this.pieces[this.activePieceIndex];
+    if (piece?.element.hasPointerCapture(pointerId)) {
+      try {
+        piece.element.releasePointerCapture(pointerId);
+      } catch {}
+    }
     this.activePointerId = null;
     this.activePieceIndex = null;
-    if (piece?.element.hasPointerCapture(pointerId)) {
-      piece.element.releasePointerCapture(pointerId);
-    }
-    if (piece) {
-      piece.element.style.transform = '';
-      piece.element.style.zIndex = piece.placed ? '5' : '3';
-    }
   }
 
   private schedule(callback: () => void, delay: number): void {
@@ -824,26 +760,29 @@ class PuzzleActivity implements Activity {
     this.timers.add(timer);
   }
 
-  private trackPieceAnimation(
-    piece: PuzzlePiece,
-    animation: Animation,
-  ): void {
-    this.trackAnimation(animation);
-    void animation.finished
-      .catch(() => undefined)
-      .finally(() => {
-        if (piece.motion === animation) {
-          piece.motion = null;
-        }
-      });
+  private trackPieceAnimation(piece: PuzzlePiece, animation: Animation): void {
+    this.animations.add(animation);
+    const remove = (): void => {
+      this.animations.delete(animation);
+      if (piece.motion === animation) {
+        piece.motion = null;
+      }
+    };
+    animation.addEventListener('finish', remove, { once: true });
+    animation.addEventListener('cancel', remove, { once: true });
   }
 
   private trackAnimation(animation: Animation): void {
     this.animations.add(animation);
-    void animation.finished
-      .catch(() => undefined)
-      .finally(() => this.animations.delete(animation));
+    const remove = (): void => {
+      this.animations.delete(animation);
+    };
+    animation.addEventListener('finish', remove, { once: true });
+    animation.addEventListener('cancel', remove, { once: true });
   }
 }
 
+export function createPuzzleActivity(): Activity {
+  return new PuzzleActivity();
+}
 export const puzzleActivity: Activity = new PuzzleActivity();

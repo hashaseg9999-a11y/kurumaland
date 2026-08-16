@@ -1,3 +1,4 @@
+import bgGarage from '../assets/bg_garage.webp';
 import carBlue from '../assets/car_blue.svg';
 import carBlueBig from '../assets/car_blue_big.svg';
 import carGreen from '../assets/car_green.svg';
@@ -10,13 +11,16 @@ import menuIcon from '../assets/menu_big-small.svg';
 import parkingBig from '../assets/parking_big.svg';
 import parkingSmall from '../assets/parking_small.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { getI18nText } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
+import { VOCAB } from '../core/vocab';
 
-type SizeName = 'big' | 'small';
+type SizeName = 'big' | 'middle' | 'small';
 
-interface VehiclePair {
-  small: string;
+interface VehicleSet {
   big: string;
+  middle: string;
+  small: string;
 }
 
 interface DragState {
@@ -30,11 +34,11 @@ interface DragState {
   moved: boolean;
 }
 
-const VEHICLE_PAIRS: readonly VehiclePair[] = [
-  { small: carRed, big: carRedBig },
-  { small: carBlue, big: carBlueBig },
-  { small: carYellow, big: carYellowBig },
-  { small: carGreen, big: carGreenBig },
+const VEHICLE_SETS: readonly VehicleSet[] = [
+  { big: carRedBig, middle: carRed, small: carRed },
+  { big: carBlueBig, middle: carBlue, small: carBlue },
+  { big: carYellowBig, middle: carYellow, small: carYellow },
+  { big: carGreenBig, middle: carGreen, small: carGreen },
 ];
 
 const STYLES = `
@@ -42,49 +46,101 @@ const STYLES = `
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1.12fr) minmax(0, 0.88fr);
-    gap: clamp(10px, 2vh, 20px);
+    grid-template-rows: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: clamp(10px, 2vh, 22px);
     overflow: hidden;
     padding:
-      max(104px, calc(env(safe-area-inset-top) + 92px))
-      max(34px, calc(env(safe-area-inset-right) + 24px))
+      max(92px, calc(env(safe-area-inset-top) + 80px))
+      max(28px, calc(env(safe-area-inset-right) + 20px))
       max(20px, calc(env(safe-area-inset-bottom) + 16px))
-      max(34px, calc(env(safe-area-inset-left) + 24px));
-    background:
-      radial-gradient(circle at 84% 13%, #fff4a9 0 5%, transparent 5.3%),
-      linear-gradient(#dff4ff 0 52%, #a9c9a2 52% 100%);
+      max(28px, calc(env(safe-area-inset-left) + 20px));
+    background: #dff4ff url("${bgGarage}") center / cover no-repeat;
+    touch-action: none;
+  }
+
+  /* Cognitive Status Banner */
+  .big-small-activity__banner {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 26px;
+    border: 4px solid #ffffff;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 8px 20px rgb(21 51 74 / 16%);
+    font-size: clamp(15px, 2.2vw, 22px);
+    font-weight: 800;
+    color: #15334a;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   .big-small-activity__row {
     display: flex;
     align-items: center;
     justify-content: space-evenly;
-    gap: clamp(34px, 9vw, 130px);
+    gap: clamp(18px, 4vw, 64px);
     min-height: 0;
   }
 
+  /* Parking Spaces (Big, Middle, Small) */
   .big-small-activity__parking {
     display: grid;
     flex: 0 0 auto;
     place-items: center;
+    position: relative;
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 220ms ease;
+  }
+
+  .big-small-activity__parking.is-target {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 24px rgba(76, 175, 80, 0.95)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
   }
 
   .big-small-activity__parking[data-size='big'] {
-    width: clamp(240px, 34vw, 430px);
-    height: clamp(150px, 25vh, 245px);
+    width: clamp(210px, 28vw, 360px);
+    height: clamp(140px, 23vh, 220px);
+  }
+
+  .big-small-activity__parking[data-size='middle'] {
+    width: clamp(150px, 20vw, 260px);
+    height: clamp(105px, 17vh, 160px);
   }
 
   .big-small-activity__parking[data-size='small'] {
-    width: clamp(104px, 16vw, 190px);
-    height: clamp(80px, 12vh, 112px);
+    width: clamp(110px, 15vw, 190px);
+    height: clamp(80px, 13vh, 120px);
   }
 
   .big-small-activity__parking img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgb(21 51 74 / 16%));
   }
 
+  .parking-label {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 3px 12px;
+    border: 2px solid #ffffff;
+    border-radius: 12px;
+    background: #2e7d32;
+    color: #ffffff;
+    font-size: clamp(11px, 1.4vw, 14px);
+    font-weight: 800;
+    pointer-events: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Cars (Big, Middle, Small) */
   .big-small-activity__car {
     z-index: 2;
     flex: 0 0 auto;
@@ -97,62 +153,42 @@ const STYLES = `
     touch-action: none;
     transform-origin: center;
     will-change: transform;
+    transition: transform 180ms ease, filter 180ms ease;
   }
 
   .big-small-activity__car[data-size='big'] {
-    width: clamp(220px, 29vw, 370px);
-    height: clamp(150px, 23vh, 225px);
+    width: clamp(200px, 26vw, 340px);
+    height: clamp(135px, 22vh, 210px);
+  }
+
+  .big-small-activity__car[data-size='middle'] {
+    width: clamp(140px, 19vw, 240px);
+    height: clamp(100px, 16vh, 150px);
   }
 
   .big-small-activity__car[data-size='small'] {
-    width: clamp(100px, 14vw, 170px);
-    height: clamp(80px, 11vh, 104px);
+    width: clamp(100px, 14vw, 175px);
+    height: clamp(75px, 12vh, 115px);
   }
 
   .big-small-activity__car img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 8px 14px rgb(21 51 74 / 22%));
   }
 
   .big-small-activity__car.is-dragging {
     z-index: 8;
     cursor: grabbing;
-    filter: drop-shadow(0 12px 10px rgb(21 51 74 / 20%));
+    filter: drop-shadow(0 18px 22px rgb(21 51 74 / 35%));
+    transform: scale(1.14);
   }
 
   .big-small-activity__car.is-parked {
     pointer-events: none;
   }
-
-  @media (max-height: 620px) and (orientation: landscape) {
-    .big-small-activity {
-      padding-top: 88px;
-      gap: 6px;
-    }
-
-    .big-small-activity__parking[data-size='big'],
-    .big-small-activity__car[data-size='big'] {
-      height: 22vh;
-    }
-  }
 `;
-
-function isInsideExpandedTarget(
-  x: number,
-  y: number,
-  target: HTMLElement,
-): boolean {
-  const rect = target.getBoundingClientRect();
-  const horizontalPadding = rect.width * 0.25;
-  const verticalPadding = rect.height * 0.25;
-  return (
-    x >= rect.left - horizontalPadding &&
-    x <= rect.right + horizontalPadding &&
-    y >= rect.top - verticalPadding &&
-    y <= rect.bottom + verticalPadding
-  );
-}
 
 class BigSmallActivity implements Activity {
   readonly id = 'big-small';
@@ -161,41 +197,47 @@ class BigSmallActivity implements Activity {
   private context: ActivityContext | null = null;
   private root: HTMLElement | null = null;
   private board: HTMLElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private listeners: AbortController | null = null;
   private dragState: DragState | null = null;
   private readonly parkingSpaces = new Map<SizeName, HTMLElement>();
-  private readonly animations = new Set<Animation>();
-  private readonly carAnimations = new Map<HTMLButtonElement, Animation>();
-  private readonly timers = new Set<number>();
+  private readonly cars = new Map<SizeName, HTMLButtonElement>();
   private particles: ParticleSystem | null = null;
   private parkedCount = 0;
   private roundFinishing = false;
-  private pairIndex = -1;
+  private setIndex = 0;
+  private useThreeSizes = false;
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.context || this.dragState || this.roundFinishing) {
-      return;
-    }
-
+    if (!this.context || this.dragState || this.roundFinishing) return;
     const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
+    if (!(target instanceof Element)) return;
 
     const button = target.closest<HTMLButtonElement>('.big-small-activity__car');
-    if (!button || button.dataset.parked === 'true') {
-      return;
-    }
+    if (!button || button.dataset.parked === 'true') return;
 
     const size = button.dataset.size as SizeName | undefined;
-    if (!size) {
-      return;
-    }
+    if (!size) return;
 
     event.preventDefault();
-    this.cancelCarAnimation(button);
     button.setPointerCapture(event.pointerId);
     button.classList.add('is-dragging');
+
+    const currentLang = this.context.speech.getLanguage();
+    if (size === 'big') {
+      this.context.sfx.play('engine');
+      this.context.speech.speak('bigCar');
+      if (this.banner) this.banner.textContent = `🐘 ${getI18nText('bigCarGuide', currentLang)}`;
+    } else if (size === 'middle') {
+      this.context.sfx.play('pop');
+      this.context.speech.speak('middleCar');
+      if (this.banner) this.banner.textContent = `🚙 ${getI18nText('middleCarGuide', currentLang)}`;
+    } else {
+      this.context.sfx.play('bubble');
+      this.context.speech.speak('smallCar');
+      if (this.banner) this.banner.textContent = `🐤 ${getI18nText('smallCarGuide', currentLang)}`;
+    }
+
     this.dragState = {
       pointerId: event.pointerId,
       button,
@@ -210,65 +252,71 @@ class BigSmallActivity implements Activity {
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
     drag.deltaX = event.clientX - drag.startX;
     drag.deltaY = event.clientY - drag.startY;
     drag.moved ||= Math.hypot(drag.deltaX, drag.deltaY) > 12;
-    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.035)`;
+    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.14)`;
+
+    // 枠のハイライト判定
+    const carRect = drag.button.getBoundingClientRect();
+    const cX = carRect.left + carRect.width / 2;
+    const cY = carRect.top + carRect.height / 2;
+
+    this.parkingSpaces.forEach((spaceEl, sSize) => {
+      const sRect = spaceEl.getBoundingClientRect();
+      const isInside =
+        cX >= sRect.left - 25 &&
+        cX <= sRect.right + 25 &&
+        cY >= sRect.top - 25 &&
+        cY <= sRect.bottom + 25;
+
+      if (isInside && sSize === drag.size) spaceEl.classList.add('is-target');
+      else spaceEl.classList.remove('is-target');
+    });
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
-    this.releasePointer(drag);
+    try {
+      drag.button.releasePointerCapture(drag.pointerId);
+    } catch {}
+    drag.button.classList.remove('is-dragging');
     this.dragState = null;
 
+    this.parkingSpaces.forEach((s) => s.classList.remove('is-target'));
+
     if (!drag.moved) {
-      this.context?.speech.speak(drag.size === 'big' ? 'bigCar' : 'smallCar');
-      this.bounceCar(drag);
+      drag.button.style.transform = '';
       return;
     }
 
     const carRect = drag.button.getBoundingClientRect();
-    const centerX = carRect.left + carRect.width / 2;
-    const centerY = carRect.top + carRect.height / 2;
+    const cX = carRect.left + carRect.width / 2;
+    const cY = carRect.top + carRect.height / 2;
     const correctSpace = this.parkingSpaces.get(drag.size);
 
-    if (
-      correctSpace &&
-      isInsideExpandedTarget(centerX, centerY, correctSpace)
-    ) {
-      this.parkCar(drag, correctSpace);
-      return;
+    if (correctSpace) {
+      const sRect = correctSpace.getBoundingClientRect();
+      const isInside =
+        cX >= sRect.left - 35 &&
+        cX <= sRect.right + 35 &&
+        cY >= sRect.top - 35 &&
+        cY <= sRect.bottom + 35;
+
+      if (isInside) {
+        this.parkCar(drag, correctSpace);
+        return;
+      }
     }
 
-    const otherSize: SizeName = drag.size === 'big' ? 'small' : 'big';
-    const wrongSpace = this.parkingSpaces.get(otherSize);
-    this.returnCar(
-      drag,
-      Boolean(
-        wrongSpace && isInsideExpandedTarget(centerX, centerY, wrongSpace),
-      ),
-    );
-  };
-
-  private readonly handlePointerCancel = (event: PointerEvent): void => {
-    const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this.releasePointer(drag);
-    this.dragState = null;
-    this.returnCar(drag, false);
+    // 戻る
+    this.returnCar(drag);
   };
 
   mount(context: ActivityContext): void {
@@ -276,298 +324,210 @@ class BigSmallActivity implements Activity {
     this.context = context;
     this.root = context.root;
     this.listeners = new AbortController();
-    this.pairIndex = -1;
+    this.setIndex = 0;
+    this.useThreeSizes = false;
 
     const style = document.createElement('style');
     style.textContent = STYLES;
 
     const board = document.createElement('div');
     board.className = 'big-small-activity';
-    board.addEventListener('pointerdown', this.handlePointerDown, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointermove', this.handlePointerMove, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointerup', this.handlePointerUp, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointercancel', this.handlePointerCancel, {
-      signal: this.listeners.signal,
-    });
 
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'big-small-activity__banner';
+    banner.textContent = `📏 ${getI18nText('bigSmallHint', currentLang)}`;
+    this.banner = banner;
+
+    board.append(banner);
     context.root.replaceChildren(style, board);
+
     this.board = board;
     this.particles = new ParticleSystem(board);
+
+    board.addEventListener('pointerdown', this.handlePointerDown, { signal: this.listeners.signal });
+    board.addEventListener('pointermove', this.handlePointerMove, { signal: this.listeners.signal });
+    board.addEventListener('pointerup', this.handlePointerUp, { signal: this.listeners.signal });
+    board.addEventListener('pointercancel', this.handlePointerUp, { signal: this.listeners.signal });
+
     this.startRound();
   }
 
   unmount(): void {
     this.listeners?.abort();
     this.listeners = null;
-    if (this.dragState) {
-      this.releasePointer(this.dragState);
-    }
-    this.dragState = null;
-    this.cancelAnimations();
     this.particles?.destroy();
     this.particles = null;
-    for (const timer of this.timers) {
-      window.clearTimeout(timer);
-    }
-    this.timers.clear();
     this.parkingSpaces.clear();
-
+    this.cars.clear();
     this.root?.replaceChildren();
+    this.banner = null;
     this.board = null;
     this.root = null;
     this.context = null;
-    this.parkedCount = 0;
+    this.dragState = null;
     this.roundFinishing = false;
-    this.pairIndex = -1;
   }
 
   private startRound(): void {
-    if (!this.board || !this.context) {
-      return;
-    }
-
-    this.cancelAnimations();
-    this.dragState = null;
+    if (!this.board || !this.context) return;
     this.parkingSpaces.clear();
+    this.cars.clear();
     this.parkedCount = 0;
     this.roundFinishing = false;
-    this.selectNextPair();
 
-    const pair = VEHICLE_PAIRS[this.pairIndex] ?? VEHICLE_PAIRS[0]!;
+    const existingBanner = this.banner;
+    this.board.replaceChildren();
+    const currentLang = this.context.speech.getLanguage();
+
+    if (existingBanner) {
+      existingBanner.textContent = `📏 ${getI18nText('bigSmallHint', currentLang)}`;
+      this.board.append(existingBanner);
+    }
+
+    const set = VEHICLE_SETS[this.setIndex % VEHICLE_SETS.length]!;
+
+    const sizes: SizeName[] = this.useThreeSizes
+      ? ['big', 'middle', 'small']
+      : ['big', 'small'];
+
+    const shuffledParkingSizes = [...sizes].sort(() => Math.random() - 0.5);
+    const shuffledCarSizes = [...sizes].sort(() => Math.random() - 0.5);
+
+    // 駐車枠行（上）
     const parkingRow = document.createElement('div');
-    parkingRow.className =
-      'big-small-activity__row big-small-activity__row--parking';
-    const vehicleRow = document.createElement('div');
-    vehicleRow.className =
-      'big-small-activity__row big-small-activity__row--vehicles';
+    parkingRow.className = 'big-small-activity__row';
 
-    const sizeOrder: SizeName[] = Math.random() < 0.5
-      ? ['big', 'small']
-      : ['small', 'big'];
-    for (const size of sizeOrder) {
-      const parking = document.createElement('div');
-      parking.className = 'big-small-activity__parking';
-      parking.dataset.size = size;
+    shuffledParkingSizes.forEach((size) => {
+      const space = document.createElement('div');
+      space.className = 'big-small-activity__parking';
+      space.dataset.size = size;
 
-      const image = document.createElement('img');
-      image.src = size === 'big' ? parkingBig : parkingSmall;
-      image.alt = '';
-      image.draggable = false;
-      parking.append(image);
-      parkingRow.append(parking);
-      this.parkingSpaces.set(size, parking);
-    }
+      const img = document.createElement('img');
+      img.src = size === 'big' ? parkingBig : parkingSmall;
+      img.alt = '';
 
-    const vehicleOrder: SizeName[] = Math.random() < 0.5
-      ? ['big', 'small']
-      : ['small', 'big'];
-    for (const size of vehicleOrder) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'big-small-activity__car';
-      button.dataset.size = size;
-      button.setAttribute('aria-label', size === 'big' ? 'おおきいくるま' : 'ちいさいくるま');
+      const label = document.createElement('span');
+      label.className = 'parking-label';
+      const sizeVocab = size === 'big' ? VOCAB.big : size === 'middle' ? VOCAB.middle : VOCAB.small;
+      label.textContent = sizeVocab[currentLang] ?? sizeVocab.ja;
 
-      const image = document.createElement('img');
-      image.src = size === 'big' ? pair.big : pair.small;
-      image.alt = '';
-      image.draggable = false;
-      button.append(image);
-      vehicleRow.append(button);
-    }
+      space.append(img, label);
+      parkingRow.append(space);
+      this.parkingSpaces.set(size, space);
+    });
 
-    this.board.replaceChildren(parkingRow, vehicleRow);
+    // 車両行（下）
+    const carRow = document.createElement('div');
+    carRow.className = 'big-small-activity__row';
+
+    shuffledCarSizes.forEach((size) => {
+      const carBtn = document.createElement('button');
+      carBtn.type = 'button';
+      carBtn.className = 'big-small-activity__car';
+      carBtn.dataset.size = size;
+      carBtn.dataset.parked = 'false';
+
+      const carImg = document.createElement('img');
+      carImg.src = size === 'big' ? set.big : size === 'middle' ? set.middle : set.small;
+      carImg.alt = '';
+      carBtn.append(carImg);
+
+      carRow.append(carBtn);
+      this.cars.set(size, carBtn);
+    });
+
+    this.board.append(parkingRow, carRow);
   }
 
-  private parkCar(drag: DragState, parking: HTMLElement): void {
-    if (!this.context) {
-      return;
-    }
-
+  private parkCar(drag: DragState, space: HTMLElement): void {
+    if (!this.context) return;
     drag.button.dataset.parked = 'true';
-    drag.button.classList.remove('is-dragging');
     drag.button.classList.add('is-parked');
 
-    const originalRect = drag.button.getBoundingClientRect();
-    const parkingRect = parking.getBoundingClientRect();
-    const currentTransform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.035)`;
-    const targetX =
-      parkingRect.left + parkingRect.width / 2 -
-      (originalRect.left - drag.deltaX + originalRect.width / 2);
-    const targetY =
-      parkingRect.top + parkingRect.height / 2 -
-      (originalRect.top - drag.deltaY + originalRect.height / 2);
-    const targetTransform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0.86)`;
+    const sRect = space.getBoundingClientRect();
+    const cRect = drag.button.getBoundingClientRect();
+    const targetX = sRect.left + (sRect.width - cRect.width) / 2;
+    const targetY = sRect.top + (sRect.height - cRect.height) / 2;
 
-    const animation = drag.button.animate(
-      [
-        { transform: currentTransform },
-        { transform: targetTransform },
-      ],
-      { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
-    );
-    this.trackAnimation(animation, drag.button, () => {
-      drag.button.style.transform = targetTransform;
-      animation.cancel();
-    });
+    const currentTranslateX = drag.deltaX;
+    const currentTranslateY = drag.deltaY;
+    const finalTranslateX = currentTranslateX + (targetX - cRect.left);
+    const finalTranslateY = currentTranslateY + (targetY - cRect.top);
 
-    this.context.sfx.play('chime');
-    this.context.speech.speak(drag.size);
-    this.sparkleAt(parking);
-    this.parkedCount += 1;
-    if (this.parkedCount === this.parkingSpaces.size) {
-      this.finishRound();
-    }
-  }
+    this.context.sfx.play('snap');
+    this.context.speech.speak('perfect');
 
-  private bounceCar(drag: DragState): void {
-    drag.button.classList.remove('is-dragging');
-    drag.button.style.transform = '';
-
-    const from = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0)`;
-    const animation = drag.button.animate(
-      [
-        { transform: `${from} scale(1)` },
-        {
-          transform: 'translate3d(0, 0, 0) scale(1.07)',
-          offset: 0.55,
-        },
-        { transform: 'translate3d(0, 0, 0) scale(1)' },
-      ],
-      { duration: 320, easing: 'ease-out' },
-    );
-    this.trackAnimation(animation, drag.button);
-  }
-
-  private returnCar(drag: DragState, shake: boolean): void {
-    drag.button.classList.remove('is-dragging');
-    drag.button.style.transform = '';
-
-    const from = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0)`;
-    const keyframes: Keyframe[] = shake
-      ? [
-          { transform: `${from} rotate(0deg)` },
-          { transform: `${from} rotate(-4deg)`, offset: 0.2 },
-          { transform: `${from} rotate(4deg)`, offset: 0.38 },
-          { transform: `${from} rotate(-3deg)`, offset: 0.54 },
-          { transform: `${from} rotate(2deg)`, offset: 0.68 },
-          { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
-        ]
-      : [
-          { transform: from },
-          { transform: 'translate3d(0, 0, 0)' },
-        ];
-    const animation = drag.button.animate(keyframes, {
-      duration: shake ? 620 : 360,
-      easing: 'ease-out',
-    });
-    this.trackAnimation(animation, drag.button);
-  }
-
-  private sparkleAt(element: HTMLElement): void {
-    if (!this.particles || !this.board) {
-      return;
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `✨ ${getI18nText('bigSmallFit', currentLang)}`;
     }
 
-    const boardRect = this.board.getBoundingClientRect();
-    const rect = element.getBoundingClientRect();
-    this.particles.emitStars(
-      rect.left - boardRect.left + rect.width / 2,
-      rect.top - boardRect.top + rect.height / 2,
-      8,
-      ['#69f0ae', '#ffd740', '#ff5252', '#448aff'],
+    this.particles?.emitStars(sRect.left + sRect.width / 2, sRect.top + sRect.height / 2, 16);
+    this.particles?.emitSparkles(sRect.left + sRect.width / 2, sRect.top + sRect.height / 2, 10);
+
+    const anim = drag.button.animate(
+      [
+        { transform: `translate3d(${currentTranslateX}px, ${currentTranslateY}px, 0) scale(1.14)` },
+        { transform: `translate3d(${finalTranslateX}px, ${finalTranslateY}px, 0) scale(1.0)` },
+      ],
+      { duration: 280, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
+    );
+
+    anim.onfinish = () => {
+      this.parkedCount++;
+      const totalNeeded = this.useThreeSizes ? 3 : 2;
+      if (this.parkedCount >= totalNeeded) {
+        this.finishRound();
+      }
+    };
+  }
+
+  private returnCar(drag: DragState): void {
+    if (!this.context) return;
+    this.context.sfx.play('pop');
+
+    drag.button.animate(
+      [
+        { transform: `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) rotate(5deg)` },
+        { transform: `translate3d(${drag.deltaX * 0.5}px, ${drag.deltaY * 0.5}px, 0) rotate(-5deg)`, offset: 0.5 },
+        { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+      ],
+      { duration: 360, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
     );
   }
 
   private finishRound(): void {
-    if (!this.context || this.roundFinishing) {
-      return;
-    }
-
+    if (!this.context || !this.board || this.roundFinishing) return;
     this.roundFinishing = true;
+
     this.context.notifyTaskComplete();
-    this.schedule(() => {
-      if (!this.context) {
-        return;
-      }
-      this.context.sfx.play('applause');
-      this.context.speech.speak('wellDone');
-    }, 1_200);
-    this.schedule(() => this.startRound(), 2_200);
-  }
+    this.context.sfx.play('fanfare');
+    this.context.speech.speak('great');
 
-  private selectNextPair(): void {
-    let nextIndex = Math.floor(Math.random() * VEHICLE_PAIRS.length);
-    if (VEHICLE_PAIRS.length > 1 && nextIndex === this.pairIndex) {
-      nextIndex = (nextIndex + 1) % VEHICLE_PAIRS.length;
-    }
-    this.pairIndex = nextIndex;
-  }
-
-  private releasePointer(drag: DragState): void {
-    if (drag.button.hasPointerCapture(drag.pointerId)) {
-      drag.button.releasePointerCapture(drag.pointerId);
-    }
-  }
-
-  private trackAnimation(
-    animation: Animation,
-    button: HTMLButtonElement,
-    onFinish?: () => void,
-  ): void {
-    this.animations.add(animation);
-    this.carAnimations.set(button, animation);
-    animation.onfinish = () => {
-      this.animations.delete(animation);
-      if (this.carAnimations.get(button) === animation) {
-        this.carAnimations.delete(button);
-      }
-      onFinish?.();
-    };
-    animation.oncancel = () => {
-      this.animations.delete(animation);
-      if (this.carAnimations.get(button) === animation) {
-        this.carAnimations.delete(button);
-      }
-    };
-  }
-
-  private cancelCarAnimation(button: HTMLButtonElement): void {
-    const animation = this.carAnimations.get(button);
-    if (!animation) {
-      return;
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🎉 ${getI18nText('bigSmallAllParked', currentLang)}`;
     }
 
-    animation.onfinish = null;
-    animation.oncancel = null;
-    animation.cancel();
-    this.animations.delete(animation);
-    this.carAnimations.delete(button);
-  }
+    this.particles?.emitCelebration(this.board.clientWidth / 2, this.board.clientHeight * 0.45);
+    this.particles?.emitFlowers(this.board.clientWidth / 2, this.board.clientHeight * 0.45, 12);
 
-  private cancelAnimations(): void {
-    for (const animation of this.animations) {
-      animation.onfinish = null;
-      animation.oncancel = null;
-      animation.cancel();
-    }
-    this.animations.clear();
-    this.carAnimations.clear();
-  }
+    // 車たちが嬉しそうにハイタッチジャンプ
+    this.cars.forEach((carBtn) => {
+      carBtn.classList.add('car-jumping');
+    });
 
-  private schedule(callback: () => void, delay: number): void {
-    const timer = window.setTimeout(() => {
-      this.timers.delete(timer);
-      callback();
-    }, delay);
-    this.timers.add(timer);
+    window.setTimeout(() => {
+      if (!this.context) return;
+      this.setIndex++;
+      this.useThreeSizes = !this.useThreeSizes; // 2段階と3段階をローテーション
+      this.startRound();
+    }, 2200);
   }
 }
 
+export function createBigSmallActivity(): Activity {
+  return new BigSmallActivity();
+}
 export const bigSmallActivity: Activity = new BigSmallActivity();

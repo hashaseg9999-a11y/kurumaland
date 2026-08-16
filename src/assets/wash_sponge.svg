@@ -1,20 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
   <!-- Ground Shadow -->
-  <ellipse cx="150" cy="238" rx="105" ry="10" fill="rgba(21, 51, 74, 0.16)" />
+  <ellipse cx="150" cy="246" rx="95" ry="9" fill="rgba(21, 51, 74, 0.16)" />
 
-  <!-- Sponge Body -->
-  <rect x="50" y="96" width="200" height="116" rx="32" fill="#FFD166" stroke="#15334A" stroke-width="7"/>
+  <!-- Sponge Pink Base Layer -->
+  <rect x="52" y="112" width="196" height="116" rx="34" fill="#FF8FA3" stroke="#15334A" stroke-width="6"/>
 
-  <!-- Pink Top Band -->
-  <rect x="50" y="96" width="200" height="48" rx="24" fill="#FF8FA3" stroke="#15334A" stroke-width="6"/>
+  <!-- Sponge Yellow Top Layer -->
+  <rect x="52" y="74" width="196" height="110" rx="34" fill="#FFD166" stroke="#15334A" stroke-width="6"/>
 
-  <!-- Texture Dots -->
-  <circle cx="96" cy="182" r="8" fill="#F6C453" opacity="0.75"/>
-  <circle cx="142" cy="194" r="8" fill="#F6C453" opacity="0.75"/>
-  <circle cx="188" cy="180" r="8" fill="#F6C453" opacity="0.75"/>
+  <!-- Sponge Pores (Organic Circles) -->
+  <circle cx="88" cy="116" r="8" fill="#F4A261" opacity="0.65"/>
+  <circle cx="128" cy="100" r="11" fill="#F4A261" opacity="0.65"/>
+  <circle cx="172" cy="120" r="9" fill="#F4A261" opacity="0.65"/>
+  <circle cx="212" cy="106" r="7" fill="#F4A261" opacity="0.65"/>
+  <circle cx="108" cy="142" r="10" fill="#F4A261" opacity="0.65"/>
+  <circle cx="152" cy="146" r="7" fill="#F4A261" opacity="0.65"/>
+  <circle cx="192" cy="142" r="10" fill="#F4A261" opacity="0.65"/>
 
-  <!-- Foam Bubbles -->
-  <circle cx="90" cy="62" r="14" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
-  <circle cx="150" cy="44" r="18" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
-  <circle cx="212" cy="62" r="12" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
+  <!-- Top Highlight -->
+  <path d="M 86 86 Q 150 78 214 86" fill="none" stroke="#FFF3B0" stroke-width="6" stroke-linecap="round"/>
 </svg>

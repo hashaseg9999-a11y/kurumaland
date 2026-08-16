@@ -2,13 +2,59 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Super Cute & Realistic Toy Vehicle SVG Generator
+ * Ultra Cute Anime-Style Character Eyes & Vehicle SVG Generator
  * Features:
- * - Large, expressive friendly cartoon eyes with double sparkle highlights
- * - Sculpted curved vehicle bodies (hood, roof, fenders, bumpers)
- * - 3D thick tires with detailed silver rims
- * - Distinctive vehicle features (Fire ladder, Police siren, Dump bed, etc.)
+ * - Expressive double-eyes with perspective (front big eye + rear secondary eye)
+ * - Gradient/iridescent pupil with bottom reflex highlight
+ * - Triple sparkling catchlights (large oval + small circle + star glint)
+ * - Cute pink blush cheeks (チーク) on smiling vehicle face
+ * - Open smiling happy mouth with pink tongue
+ * - 3D thick glossy wheels & clean vehicle body curves
  */
+
+function generateCuteFace(eyeCenterX, eyeCenterY, eyeScale = 1.0, blushX, blushY, smileX, smileY) {
+  return `
+    <!-- CUTE PERSPECTIVE DUAL EYES & BLUSH -->
+    <!-- Rear Eye (Secondary Eye) -->
+    <ellipse cx="${eyeCenterX - 18 * eyeScale}" cy="${eyeCenterY - 1}" rx="${6.5 * eyeScale}" ry="${9 * eyeScale}" fill="#FFFFFF" stroke="#15334A" stroke-width="2"/>
+    <ellipse cx="${eyeCenterX - 17 * eyeScale}" cy="${eyeCenterY - 1}" rx="${4.2 * eyeScale}" ry="${6.2 * eyeScale}" fill="#152438"/>
+    <!-- Rear Eye Iris Glow -->
+    <path d="M ${eyeCenterX - 20 * eyeScale} ${eyeCenterY + 1} Q ${eyeCenterX - 17 * eyeScale} ${eyeCenterY + 4 * eyeScale} ${eyeCenterX - 14 * eyeScale} ${eyeCenterY + 1}" fill="none" stroke="#38BDF8" stroke-width="${1.5 * eyeScale}" stroke-linecap="round" opacity="0.9"/>
+    <!-- Rear Eye Highlights -->
+    <ellipse cx="${eyeCenterX - 19 * eyeScale}" cy="${eyeCenterY - 4 * eyeScale}" rx="${2.2 * eyeScale}" ry="${2.6 * eyeScale}" fill="#FFFFFF"/>
+    <circle cx="${eyeCenterX - 15 * eyeScale}" cy="${eyeCenterY + 1 * eyeScale}" r="${1.0 * eyeScale}" fill="#FFFFFF"/>
+    <!-- Rear Brow -->
+    <path d="M ${eyeCenterX - 23 * eyeScale} ${eyeCenterY - 13 * eyeScale} Q ${eyeCenterX - 17 * eyeScale} ${eyeCenterY - 16 * eyeScale} ${eyeCenterX - 11 * eyeScale} ${eyeCenterY - 12 * eyeScale}" fill="none" stroke="#15334A" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Front Eye (Main Big Sparkling Eye) -->
+    <ellipse cx="${eyeCenterX}" cy="${eyeCenterY}" rx="${10.5 * eyeScale}" ry="${13.5 * eyeScale}" fill="#FFFFFF" stroke="#15334A" stroke-width="2.6"/>
+    <!-- Main Pupil (Dark Navy) -->
+    <ellipse cx="${eyeCenterX + 1.2 * eyeScale}" cy="${eyeCenterY}" rx="${7.2 * eyeScale}" ry="${9.8 * eyeScale}" fill="#152438"/>
+    <!-- Bottom Iris Glow -->
+    <path d="M ${eyeCenterX - 3.5 * eyeScale} ${eyeCenterY + 3 * eyeScale} Q ${eyeCenterX + 1.5 * eyeScale} ${eyeCenterY + 7.5 * eyeScale} ${eyeCenterX + 6.5 * eyeScale} ${eyeCenterY + 3 * eyeScale}" fill="none" stroke="#38BDF8" stroke-width="${2.2 * eyeScale}" stroke-linecap="round" opacity="0.95"/>
+    <path d="M ${eyeCenterX - 2 * eyeScale} ${eyeCenterY + 5 * eyeScale} Q ${eyeCenterX + 1.5 * eyeScale} ${eyeCenterY + 8.5 * eyeScale} ${eyeCenterX + 5 * eyeScale} ${eyeCenterY + 5 * eyeScale}" fill="none" stroke="#7DD3FC" stroke-width="${1.2 * eyeScale}" stroke-linecap="round" opacity="0.9"/>
+    
+    <!-- Big Main Catchlight (Sparkle 1) -->
+    <ellipse cx="${eyeCenterX - 1.8 * eyeScale}" cy="${eyeCenterY - 4.5 * eyeScale}" rx="${3.6 * eyeScale}" ry="${4.2 * eyeScale}" fill="#FFFFFF"/>
+    <!-- Sub Catchlight (Sparkle 2) -->
+    <circle cx="${eyeCenterX + 4.5 * eyeScale}" cy="${eyeCenterY + 3.5 * eyeScale}" r="${1.8 * eyeScale}" fill="#FFFFFF"/>
+    <!-- Tiny Star Glint (Sparkle 3) -->
+    <circle cx="${eyeCenterX + 4.8 * eyeScale}" cy="${eyeCenterY - 3.2 * eyeScale}" r="${1.2 * eyeScale}" fill="#FFFFFF" opacity="0.95"/>
+
+    <!-- Cute Eyelash & Brow -->
+    <path d="M ${eyeCenterX - 8 * eyeScale} ${eyeCenterY - 11 * eyeScale} Q ${eyeCenterX + 2 * eyeScale} ${eyeCenterY - 15 * eyeScale} ${eyeCenterX + 11 * eyeScale} ${eyeCenterY - 10 * eyeScale}" fill="none" stroke="#15334A" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M ${eyeCenterX - 7 * eyeScale} ${eyeCenterY - 17 * eyeScale} Q ${eyeCenterX + 2 * eyeScale} ${eyeCenterY - 21 * eyeScale} ${eyeCenterX + 10 * eyeScale} ${eyeCenterY - 16 * eyeScale}" fill="none" stroke="#15334A" stroke-width="2.6" stroke-linecap="round"/>
+
+    <!-- Soft Pink Blush Cheek (チーク) -->
+    <ellipse cx="${blushX}" cy="${blushY}" rx="7.5" ry="4.5" fill="#FF6B8B" opacity="0.7"/>
+    <circle cx="${blushX - 2.5}" cy="${blushY - 1}" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Happy Open Smile Mouth -->
+    <path d="M ${smileX - 8} ${smileY} Q ${smileX} ${smileY + 12} ${smileX + 10} ${smileY + 1} Z" fill="#E63946" stroke="#15334A" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Tongue in Mouth -->
+    <path d="M ${smileX - 4} ${smileY + 6} Q ${smileX + 1} ${smileY + 11} ${smileX + 6} ${smileY + 6} Z" fill="#FF8DA1"/>
+  `;
+}
 
 function generateFireEngine(isBig, isDirty) {
   const scale = isBig ? 1.4 : 1.0;
@@ -46,8 +92,7 @@ function generateFireEngine(isBig, isDirty) {
     <line x1="87" y1="14" x2="87" y2="22" stroke="#15334A" stroke-width="2"/>
     <line x1="100" y1="14" x2="100" y2="22" stroke="#15334A" stroke-width="2"/>
 
-    <!-- Fire Engine Sculpted Main Body -->
-    <!-- Rear Cabin & Cargo Body -->
+    <!-- Fire Engine Main Body -->
     <path d="M 22 36 C 22 28 28 22 36 22 L 115 22 L 115 92 L 22 92 Z" fill="#E63946" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
     
     <!-- Front Cabin Hood & Sloped Windshield -->
@@ -69,28 +114,18 @@ function generateFireEngine(isBig, isDirty) {
     <circle cx="68" cy="78" r="3" fill="#E63946"/>
 
     <!-- Large Front Cabin Windshield Window -->
-    <path d="M 115 28 L 138 28 C 145 28 152 34 156 42 L 158 50 L 115 50 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 108 26 L 140 26 C 148 26 156 32 160 42 L 162 52 L 108 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
     
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <!-- Eye Outer White -->
-    <ellipse cx="140" cy="39" rx="9" ry="11" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <!-- Eye Pupil (Dark Navy Blue) -->
-    <ellipse cx="142" cy="39" rx="5.5" ry="7" fill="#152B3C"/>
-    <!-- Large White Sparkle 1 -->
-    <circle cx="140" cy="35" r="2.8" fill="#FFFFFF"/>
-    <!-- Small White Sparkle 2 -->
-    <circle cx="144" cy="42" r="1.3" fill="#FFFFFF"/>
-    <!-- Friendly Brow -->
-    <path d="M 130 25 Q 140 21 150 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    ${generateCuteFace(144, 38, 1.05, 154, 62, 164, 72)}
 
     <!-- Window Glare Highlight -->
-    <path d="M 118 31 L 130 31" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 112 29 L 124 29" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
 
     ${mudLayer}
 
-    <!-- Front Bumper & Friendly Smile -->
+    <!-- Front Bumper -->
     <path d="M 175 70 Q 183 70 183 80 Q 183 88 172 88" fill="#CED4DA" stroke="#15334A" stroke-width="3.5" stroke-linejoin="round"/>
-    <path d="M 158 76 Q 164 83 170 76" fill="none" stroke="#15334A" stroke-width="3" stroke-linecap="round"/>
 
     <!-- Cute Big Headlight -->
     <circle cx="174" cy="58" r="7" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
@@ -129,7 +164,7 @@ function generatePoliceCar(isBig) {
     <rect x="98" y="23" width="12" height="5" fill="#CED4DA" stroke="#15334A" stroke-width="2"/>
 
     <!-- Police Car Roof Curve (White) -->
-    <path d="M 48 42 L 65 24 L 135 24 C 150 24 160 33 166 42 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M 48 44 L 65 22 L 140 22 C 155 22 166 32 172 44 Z" fill="#FFFFFF" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
 
     <!-- Lower Body Base (Black) -->
     <path d="M 22 42 C 22 42 22 92 36 92 L 180 92 C 188 92 188 72 186 60 C 184 50 174 42 166 42 Z" fill="#1A1A1E" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
@@ -139,21 +174,14 @@ function generatePoliceCar(isBig) {
     <line x1="22" y1="60" x2="182" y2="60" stroke="#15334A" stroke-width="3"/>
 
     <!-- Rear Window & Front Windshield -->
-    <rect x="62" y="28" width="32" height="16" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
-    <path d="M 98 28 L 132 28 C 140 28 146 32 150 40 L 152 44 L 98 44 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <rect x="62" y="27" width="28" height="18" rx="3" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 98 25 L 140 25 C 150 25 158 32 162 42 L 164 50 L 98 50 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
 
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <ellipse cx="128" cy="36" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <ellipse cx="130" cy="36" rx="5" ry="6.5" fill="#152B3C"/>
-    <circle cx="128" cy="32" r="2.6" fill="#FFFFFF"/>
-    <circle cx="132" cy="39" r="1.2" fill="#FFFFFF"/>
-    <path d="M 118 22 Q 128 18 138 23" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    ${generateCuteFace(144, 37, 1.05, 154, 60, 166, 70)}
 
     <!-- Gold Police Star Badge Emblem on Side Door -->
     <polygon points="98,66 100,72 106,72 101,76 103,82 98,78 93,82 95,76 90,72 96,72" fill="#FFD166" stroke="#15334A" stroke-width="2"/>
-
-    <!-- Front Bumper & Friendly Smile -->
-    <path d="M 162 76 Q 168 82 174 76" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
 
     <!-- Cute Big Headlight -->
     <circle cx="178" cy="55" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
@@ -197,14 +225,10 @@ function generateDumpTruck(isBig) {
     <path d="M 112 25 L 155 25 C 166 25 174 33 177 46 L 180 74 L 112 74 Z" fill="#FFB703" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
     
     <!-- Cabin Window -->
-    <path d="M 120 31 L 152 31 C 158 31 162 36 164 45 L 165 52 L 120 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 116 29 L 152 29 C 160 29 166 35 168 45 L 169 54 L 116 54 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
 
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <ellipse cx="142" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <ellipse cx="144" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
-    <circle cx="142" cy="37" r="2.6" fill="#FFFFFF"/>
-    <circle cx="146" cy="44" r="1.2" fill="#FFFFFF"/>
-    <path d="M 132 26 Q 142 22 152 27" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    ${generateCuteFace(148, 40, 1.05, 158, 62, 168, 68)}
 
     <!-- Hazard Safety Bumper Stripes -->
     <rect x="22" y="74" width="158" height="16" fill="#333333" stroke="#15334A" stroke-width="3"/>
@@ -253,14 +277,10 @@ function generateGreenTruck(isBig) {
     <path d="M 108 24 L 152 24 C 162 24 170 32 174 44 L 176 92 L 108 92 Z" fill="#52B788" stroke="#15334A" stroke-width="4.5" stroke-linejoin="round"/>
 
     <!-- Cabin Window -->
-    <path d="M 116 30 L 148 30 C 154 30 158 35 160 44 L 161 52 L 116 52 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
+    <path d="M 112 28 L 148 28 C 156 28 162 34 164 44 L 165 54 L 112 54 Z" fill="#EAF8FF" stroke="#15334A" stroke-width="3"/>
 
-    <!-- BIG CUTE EXPRESSIVE CARTOON EYES -->
-    <ellipse cx="138" cy="41" rx="8.5" ry="10.5" fill="#FFFFFF" stroke="#15334A" stroke-width="2.5"/>
-    <ellipse cx="140" cy="41" rx="5" ry="6.5" fill="#152B3C"/>
-    <circle cx="138" cy="37" r="2.6" fill="#FFFFFF"/>
-    <circle cx="142" cy="44" r="1.2" fill="#FFFFFF"/>
-    <path d="M 128 25 Q 138 21 148 26" fill="none" stroke="#15334A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- ULTRA CUTE ANIME FACE -->
+    ${generateCuteFace(144, 40, 1.05, 154, 62, 166, 72)}
 
     <!-- Headlight -->
     <circle cx="174" cy="62" r="6.5" fill="#FFEA00" stroke="#15334A" stroke-width="3"/>
@@ -453,50 +473,55 @@ function generateGarage(mainColor, doorColor) {
 function generateSignal() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 380" width="200" height="380">
   <!-- Pole -->
-  <rect x="94" y="332" width="12" height="44" fill="#5C677D" stroke="#15334A" stroke-width="3"/>
-
-  <!-- Housing -->
-  <rect x="40" y="14" width="120" height="330" rx="26" fill="#2B2D42" stroke="#15334A" stroke-width="5"/>
-
-  <!-- Neutral Grey Lenses (CSS overlays the lit colors) -->
-  <circle cx="100" cy="76" r="36" fill="#B0B7BD" stroke="#15334A" stroke-width="4"/>
-  <circle cx="100" cy="173" r="36" fill="#B0B7BD" stroke="#15334A" stroke-width="4"/>
-  <circle cx="100" cy="270" r="36" fill="#B0B7BD" stroke="#15334A" stroke-width="4"/>
-
-  <!-- Visor Hoods -->
-  <path d="M 60 60 A 40 40 0 0 1 140 60 L 140 82 A 40 40 0 0 0 60 82 Z" fill="#333D51"/>
-  <path d="M 60 157 A 40 40 0 0 1 140 157 L 140 179 A 40 40 0 0 0 60 179 Z" fill="#333D51"/>
-  <path d="M 60 254 A 40 40 0 0 1 140 254 L 140 276 A 40 40 0 0 0 60 276 Z" fill="#333D51"/>
+  <rect x="91" y="270" width="18" height="110" rx="4" fill="#3D405B" stroke="#15334A" stroke-width="5"/>
+  <!-- Main Housing -->
+  <rect x="36" y="14" width="128" height="268" rx="36" fill="#2B2D42" stroke="#15334A" stroke-width="7"/>
+  <!-- Hoods -->
+  <path d="M 36 68 Q 100 30 164 68" fill="none" stroke="#15334A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 36 156 Q 100 118 164 156" fill="none" stroke="#15334A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 36 244 Q 100 206 164 244" fill="none" stroke="#15334A" stroke-width="8" stroke-linecap="round"/>
+  <!-- Dark Lamp Holders -->
+  <circle cx="100" cy="72" r="34" fill="#1C1D2B" stroke="#15334A" stroke-width="4"/>
+  <circle cx="100" cy="154" r="34" fill="#1C1D2B" stroke="#15334A" stroke-width="4"/>
+  <circle cx="100" cy="236" r="34" fill="#1C1D2B" stroke="#15334A" stroke-width="4"/>
+  <!-- Lens Rims -->
+  <circle cx="100" cy="72" r="34" fill="none" stroke="#4A4E69" stroke-width="3"/>
+  <circle cx="100" cy="154" r="34" fill="none" stroke="#4A4E69" stroke-width="3"/>
+  <circle cx="100" cy="236" r="34" fill="none" stroke="#4A4E69" stroke-width="3"/>
 </svg>`;
 }
 
 function generateWashSponge() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
   <!-- Ground Shadow -->
-  <ellipse cx="150" cy="238" rx="105" ry="10" fill="rgba(21, 51, 74, 0.16)" />
+  <ellipse cx="150" cy="246" rx="95" ry="9" fill="rgba(21, 51, 74, 0.16)" />
 
-  <!-- Sponge Body -->
-  <rect x="50" y="96" width="200" height="116" rx="32" fill="#FFD166" stroke="#15334A" stroke-width="7"/>
+  <!-- Sponge Pink Base Layer -->
+  <rect x="52" y="112" width="196" height="116" rx="34" fill="#FF8FA3" stroke="#15334A" stroke-width="6"/>
 
-  <!-- Pink Top Band -->
-  <rect x="50" y="96" width="200" height="48" rx="24" fill="#FF8FA3" stroke="#15334A" stroke-width="6"/>
+  <!-- Sponge Yellow Top Layer -->
+  <rect x="52" y="74" width="196" height="110" rx="34" fill="#FFD166" stroke="#15334A" stroke-width="6"/>
 
-  <!-- Texture Dots -->
-  <circle cx="96" cy="182" r="8" fill="#F6C453" opacity="0.75"/>
-  <circle cx="142" cy="194" r="8" fill="#F6C453" opacity="0.75"/>
-  <circle cx="188" cy="180" r="8" fill="#F6C453" opacity="0.75"/>
+  <!-- Sponge Pores (Organic Circles) -->
+  <circle cx="88" cy="116" r="8" fill="#F4A261" opacity="0.65"/>
+  <circle cx="128" cy="100" r="11" fill="#F4A261" opacity="0.65"/>
+  <circle cx="172" cy="120" r="9" fill="#F4A261" opacity="0.65"/>
+  <circle cx="212" cy="106" r="7" fill="#F4A261" opacity="0.65"/>
+  <circle cx="108" cy="142" r="10" fill="#F4A261" opacity="0.65"/>
+  <circle cx="152" cy="146" r="7" fill="#F4A261" opacity="0.65"/>
+  <circle cx="192" cy="142" r="10" fill="#F4A261" opacity="0.65"/>
 
-  <!-- Foam Bubbles -->
-  <circle cx="90" cy="62" r="14" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
-  <circle cx="150" cy="44" r="18" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
-  <circle cx="212" cy="62" r="12" fill="#FFFFFF" stroke="#15334A" stroke-width="4"/>
+  <!-- Top Highlight -->
+  <path d="M 86 86 Q 150 78 214 86" fill="none" stroke="#FFF3B0" stroke-width="6" stroke-linecap="round"/>
 </svg>`;
 }
 
 function generateWashFoam() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
-  <circle cx="108" cy="138" r="55" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
-  <circle cx="184" cy="118" r="66" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <!-- Cloud-like Soap Foam Cluster -->
+  <circle cx="150" cy="142" r="64" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <circle cx="104" cy="154" r="48" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
+  <circle cx="196" cy="154" r="48" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="152" cy="196" r="50" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="88" cy="204" r="40" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
   <circle cx="214" cy="186" r="44" fill="#FFFFFF" stroke="#15334A" stroke-width="6"/>
@@ -630,4 +655,4 @@ fs.writeFileSync(path.join(outDir, 'wash_towel.svg'), generateWashTowel());
 fs.writeFileSync(path.join(outDir, 'parking_big.svg'), generateParking(true));
 fs.writeFileSync(path.join(outDir, 'parking_small.svg'), generateParking(false));
 
-console.log('Super Cute & Realistic Toy Vehicles generated successfully!');
+console.log('Ultra Cute Anime-Style Character Eyes & Vehicles generated successfully!');

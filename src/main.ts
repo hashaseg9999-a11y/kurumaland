@@ -78,6 +78,9 @@ router = new ActivityRouter({
   speech,
   sfx,
   getSettings: () => ({ ...settings }),
+  onSettingsChange: (nextSettings) => {
+    Object.assign(settings, nextSettings);
+  },
   onTaskComplete: () => {
     endSession.notifyTaskComplete();
   },

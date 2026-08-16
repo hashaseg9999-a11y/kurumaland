@@ -1,15 +1,19 @@
+import bgTrain from '../assets/bg_train.webp';
 import carBlue from '../assets/car_blue.svg';
 import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
 import carYellow from '../assets/car_yellow.svg';
 import menuIcon from '../assets/menu_line-up.svg';
 import type { Activity, ActivityContext } from '../core/activity';
+import { getI18nText } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
+import type { VocabKey } from '../core/vocab';
 
 interface TrainCar {
   id: string;
   car: string;
-  label: string;
+  nameJa: string;
+  countVocab: VocabKey;
 }
 
 interface DragState {
@@ -24,10 +28,10 @@ interface DragState {
 }
 
 const TRAIN_CARS: readonly TrainCar[] = [
-  { id: 'red', car: carRed, label: 'しょうぼうしゃ' },
-  { id: 'blue', car: carBlue, label: 'パトカー' },
-  { id: 'yellow', car: carYellow, label: 'ダンプカー' },
-  { id: 'green', car: carGreen, label: 'トラック' },
+  { id: 'red', car: carRed, nameJa: 'しょうぼうしゃ', countVocab: 'count1' },
+  { id: 'blue', car: carBlue, nameJa: 'パトカー', countVocab: 'count2' },
+  { id: 'yellow', car: carYellow, nameJa: 'ダンプカー', countVocab: 'count3' },
+  { id: 'green', car: carGreen, nameJa: 'トラック', countVocab: 'count4' },
 ];
 
 const TRAIN_LENGTH = 4;
@@ -38,19 +42,39 @@ const STYLES = `
     inset: 0;
     overflow: hidden;
     padding:
-      max(104px, calc(env(safe-area-inset-top) + 92px))
+      max(92px, calc(env(safe-area-inset-top) + 80px))
       max(24px, calc(env(safe-area-inset-right) + 18px))
       max(24px, calc(env(safe-area-inset-bottom) + 18px))
       max(24px, calc(env(safe-area-inset-left) + 18px));
-    background:
-      radial-gradient(circle at 84% 13%, rgb(255 244 169 / 80%) 0 5%, transparent 5.3%),
-      linear-gradient(#cceeff 0 46%, #aee3ff 46% 52%, #8bc34a 52% 100%);
+    background: #cceeff url("${bgTrain}") center / cover no-repeat;
     touch-action: none;
+  }
+
+  /* Status Banner */
+  .line-up-activity__banner {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 26px;
+    border: 4px solid #ffffff;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 8px 20px rgb(21 51 74 / 16%);
+    font-size: clamp(15px, 2.2vw, 22px);
+    font-weight: 800;
+    color: #15334a;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   .line-up-activity__cars {
     position: absolute;
-    top: max(108px, calc(env(safe-area-inset-top) + 96px));
+    top: max(100px, calc(env(safe-area-inset-top) + 88px));
     left: 0;
     right: 0;
     display: flex;
@@ -64,8 +88,8 @@ const STYLES = `
     position: relative;
     z-index: 2;
     flex: 0 0 auto;
-    width: clamp(110px, 17vw, 200px);
-    height: clamp(84px, 13vh, 130px);
+    width: clamp(115px, 18vw, 210px);
+    height: clamp(86px, 14vh, 135px);
     min-width: 80px;
     min-height: 80px;
     padding: 0;
@@ -75,30 +99,34 @@ const STYLES = `
     touch-action: none;
     transform-origin: center;
     will-change: transform;
+    transition: transform 180ms ease, filter 180ms ease;
   }
 
   .line-up-activity__car img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 8px 14px rgb(21 51 74 / 22%));
   }
 
   .line-up-activity__car.is-dragging {
     z-index: 8;
     cursor: grabbing;
-    filter: drop-shadow(0 12px 10px rgb(21 51 74 / 20%));
+    filter: drop-shadow(0 18px 22px rgb(21 51 74 / 35%));
+    transform: scale(1.14);
   }
 
   .line-up-activity__car.is-connected {
     pointer-events: none;
   }
 
+  /* Train Track Road at Bottom */
   .line-up-activity__road {
     position: absolute;
     bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px));
     left: 0;
     right: 0;
-    height: clamp(120px, 18vh, 170px);
+    height: clamp(120px, 19vh, 175px);
   }
 
   .line-up-activity__road::before {
@@ -107,9 +135,9 @@ const STYLES = `
     left: 0;
     right: 0;
     top: 50%;
-    height: 6px;
+    height: 8px;
     transform: translateY(-50%);
-    background: repeating-linear-gradient(90deg, #ffffff 0 28px, transparent 28px 58px);
+    background: repeating-linear-gradient(90deg, #ffffff 0 32px, transparent 32px 64px);
     opacity: 0.9;
   }
 
@@ -117,58 +145,57 @@ const STYLES = `
     position: absolute;
     bottom: 0;
     display: grid;
-    width: clamp(110px, 17vw, 200px);
-    height: clamp(84px, 13vh, 130px);
+    width: clamp(115px, 18vw, 210px);
+    height: clamp(86px, 14vh, 135px);
     place-items: center;
-    border: 4px dashed rgb(53 85 103 / 32%);
-    border-radius: 18px;
-    background: rgb(255 255 255 / 30%);
+    border: 4px dashed rgb(53 85 103 / 36%);
+    border-radius: 22px;
+    background: rgb(255 255 255 / 35%);
+    transition: border-color 200ms ease, background 200ms ease;
   }
 
-  .line-up-activity__slot.is-engine::after {
-    content: "★";
+  .slot-number-badge {
     position: absolute;
     top: -14px;
     left: 50%;
-    color: #ffb703;
-    font-size: clamp(22px, 3vw, 30px);
-    line-height: 1;
     transform: translateX(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: #0288d1;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 900;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+  }
+
+  .line-up-activity__slot.is-engine .slot-number-badge {
+    background: #f57f17;
   }
 
   .line-up-activity__slot.is-connected {
     border-style: solid;
-    border-color: rgb(83 183 136 / 60%);
-    background: rgb(255 255 255 / 55%);
+    border-color: rgb(83 183 136 / 70%);
+    background: rgb(255 255 255 / 60%);
   }
 
-  .line-up-activity__hint {
+  /* Train Coupler Link between connected cars */
+  .line-up-coupler {
     position: absolute;
-    z-index: 4;
-    top: max(60px, calc(env(safe-area-inset-top) + 48px));
-    left: 50%;
-    padding: 6px 22px;
-    border-radius: 18px;
-    background: rgb(255 255 255 / 70%);
-    box-shadow: 0 6px 14px rgb(21 51 74 / 12%);
-    color: #15334a;
-    font-size: clamp(13px, 1.8vw, 18px);
-    font-weight: 700;
-    opacity: 0;
-    transform: translate(-50%, -6px);
-    transition: opacity 200ms ease, transform 200ms ease;
-    white-space: nowrap;
-  }
-
-  .line-up-activity__hint.is-visible {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .line-up-activity * {
-      animation-duration: 1ms !important;
-    }
+    right: -16px;
+    top: 50%;
+    width: 24px;
+    height: 10px;
+    transform: translateY(-50%);
+    background: #455a64;
+    border: 2px solid #ffffff;
+    border-radius: 4px;
+    z-index: 1;
+    pointer-events: none;
   }
 `;
 
@@ -179,6 +206,7 @@ class LineUpActivity implements Activity {
   private context: ActivityContext | null = null;
   private root: HTMLElement | null = null;
   private board: HTMLElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private listeners: AbortController | null = null;
   private dragState: DragState | null = null;
   private particles: ParticleSystem | null = null;
@@ -192,29 +220,27 @@ class LineUpActivity implements Activity {
   private roundFinishing = false;
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.context || this.dragState || this.roundFinishing) {
-      return;
-    }
-
+    if (!this.context || this.dragState || this.roundFinishing) return;
     const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
+    if (!(target instanceof Element)) return;
 
     const button = target.closest<HTMLButtonElement>('.line-up-activity__car');
-    if (!button || button.dataset.connected === 'true') {
-      return;
-    }
+    if (!button || button.dataset.connected === 'true') return;
 
     const carId = button.dataset.carId;
-    if (!carId) {
-      return;
-    }
+    if (!carId) return;
 
     event.preventDefault();
     this.cancelCarAnimation(button);
     button.setPointerCapture(event.pointerId);
     button.classList.add('is-dragging');
+
+    const item = TRAIN_CARS.find((c) => c.id === carId);
+    if (item && this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🚃 ${getI18nText('lineUpConnectCar', currentLang)}`;
+    }
+
     this.dragState = {
       pointerId: event.pointerId,
       button,
@@ -229,22 +255,18 @@ class LineUpActivity implements Activity {
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
     drag.deltaX = event.clientX - drag.startX;
     drag.deltaY = event.clientY - drag.startY;
     drag.moved ||= Math.hypot(drag.deltaX, drag.deltaY) > 12;
-    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.05)`;
+    drag.button.style.transform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.14)`;
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     event.preventDefault();
     this.releasePointer(drag);
@@ -256,20 +278,12 @@ class LineUpActivity implements Activity {
       return;
     }
 
-    const expectedSlotIndex = TRAIN_CARS.findIndex((car) => car.id === drag.carId);
-    if (expectedSlotIndex === -1 || this.occupiedSlots.has(expectedSlotIndex)) {
-      this.returnCar(drag, false);
-      return;
-    }
+    // 次に繋ぐべきスロットを探す（左から順に繋ぐ）
+    const nextSlotIndex = this.occupiedSlots.size;
+    const targetSlot = this.slots[nextSlotIndex];
 
-    const slot = this.slots[expectedSlotIndex];
-    if (!slot) {
-      this.returnCar(drag, false);
-      return;
-    }
-
-    if (this.isInsideExpandedTarget(drag, slot)) {
-      this.connectCar(drag, slot, expectedSlotIndex);
+    if (targetSlot && this.isInsideExpandedTarget(drag, targetSlot)) {
+      this.connectCar(drag, targetSlot, nextSlotIndex);
       return;
     }
 
@@ -278,9 +292,7 @@ class LineUpActivity implements Activity {
 
   private readonly handlePointerCancel = (event: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     this.releasePointer(drag);
     this.dragState = null;
@@ -300,6 +312,12 @@ class LineUpActivity implements Activity {
     const board = document.createElement('div');
     board.className = 'line-up-activity';
 
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'line-up-activity__banner';
+    banner.textContent = `🚂 ${getI18nText('lineUpHint', currentLang)}`;
+    this.banner = banner;
+
     const carsArea = document.createElement('div');
     carsArea.className = 'line-up-activity__cars';
     carsArea.setAttribute('aria-label', 'くるまを ならべて れっしゃにしよう');
@@ -309,7 +327,7 @@ class LineUpActivity implements Activity {
       button.type = 'button';
       button.className = 'line-up-activity__car';
       button.dataset.carId = item.id;
-      button.setAttribute('aria-label', item.label);
+      button.setAttribute('aria-label', item.nameJa);
 
       const car = document.createElement('img');
       car.src = item.car;
@@ -327,64 +345,59 @@ class LineUpActivity implements Activity {
     for (let index = 0; index < TRAIN_LENGTH; index += 1) {
       const slot = document.createElement('div');
       slot.className = 'line-up-activity__slot';
-      if (index === 0) {
-        slot.classList.add('is-engine');
-      }
+      if (index === 0) slot.classList.add('is-engine');
+
+      const numBadge = document.createElement('span');
+      numBadge.className = 'slot-number-badge';
+      numBadge.textContent = String(index + 1);
+
+      slot.append(numBadge);
       road.append(slot);
       this.slots.push(slot);
     }
 
-    const hint = document.createElement('div');
-    hint.className = 'line-up-activity__hint';
-    hint.setAttribute('aria-live', 'polite');
-    hint.textContent = 'くるまを むかえるよ';
-
-    board.append(carsArea, road, hint);
+    board.append(banner, carsArea, road);
     context.root.replaceChildren(style, board);
     this.board = board;
 
-    board.addEventListener('pointerdown', this.handlePointerDown, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointermove', this.handlePointerMove, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointerup', this.handlePointerUp, {
-      signal: this.listeners.signal,
-    });
-    board.addEventListener('pointercancel', this.handlePointerCancel, {
-      signal: this.listeners.signal,
-    });
+    board.addEventListener('pointerdown', this.handlePointerDown, { signal: this.listeners.signal });
+    board.addEventListener('pointermove', this.handlePointerMove, { signal: this.listeners.signal });
+    board.addEventListener('pointerup', this.handlePointerUp, { signal: this.listeners.signal });
+    board.addEventListener('pointercancel', this.handlePointerCancel, { signal: this.listeners.signal });
 
     this.particles = new ParticleSystem(board);
     this.layoutSlots();
     this.layoutCars();
-    this.showHint();
+
+    context.speech.speak('connect');
   }
 
   unmount(): void {
     this.listeners?.abort();
     this.listeners = null;
-    if (this.dragState) {
-      this.releasePointer(this.dragState);
-    }
+    if (this.dragState) this.releasePointer(this.dragState);
     this.dragState = null;
+
     for (const animation of this.animations) {
       animation.cancel();
     }
     this.animations.clear();
     this.carAnimations.clear();
+
     for (const timer of this.timers) {
       window.clearTimeout(timer);
     }
     this.timers.clear();
+
     this.particles?.destroy();
     this.particles = null;
+
     this.carButtons.clear();
     this.slots.length = 0;
     this.connected.length = 0;
     this.occupiedSlots.clear();
     this.root?.replaceChildren();
+    this.banner = null;
     this.root = null;
     this.board = null;
     this.context = null;
@@ -393,13 +406,11 @@ class LineUpActivity implements Activity {
 
   private layoutSlots(): void {
     const road = this.board?.querySelector<HTMLElement>('.line-up-activity__road');
-    if (!road) {
-      return;
-    }
+    if (!road) return;
 
     const width = road.clientWidth;
     const slotWidth = this.slots[0]?.clientWidth ?? 120;
-    const gap = clampNumber(width * 0.02, 8, 20);
+    const gap = clampNumber(width * 0.02, 10, 24);
     const totalWidth = TRAIN_LENGTH * slotWidth + (TRAIN_LENGTH - 1) * gap;
     let left = Math.max(12, (width - totalWidth) / 2);
 
@@ -411,9 +422,7 @@ class LineUpActivity implements Activity {
 
   private layoutCars(): void {
     const area = this.board?.querySelector<HTMLElement>('.line-up-activity__cars');
-    if (!area) {
-      return;
-    }
+    if (!area) return;
 
     const areaWidth = area.clientWidth;
     const count = TRAIN_CARS.length;
@@ -421,7 +430,7 @@ class LineUpActivity implements Activity {
 
     for (let index = 0; index < count; index += 1) {
       const jittered = (index + 0.5) / count;
-      positions.push(clampNumber(areaWidth * jittered + jitterNumber(12), 40, areaWidth - 40));
+      positions.push(clampNumber(areaWidth * jittered + jitterNumber(12), 45, areaWidth - 45));
     }
 
     positions.sort(() => Math.random() - 0.5);
@@ -436,8 +445,8 @@ class LineUpActivity implements Activity {
 
   private isInsideExpandedTarget(drag: DragState, target: HTMLElement): boolean {
     const rect = target.getBoundingClientRect();
-    const horizontalPadding = rect.width * 0.5;
-    const verticalPadding = rect.height * 0.5;
+    const horizontalPadding = rect.width * 0.55;
+    const verticalPadding = rect.height * 0.55;
     const buttonRect = drag.button.getBoundingClientRect();
     const centerX = buttonRect.left + buttonRect.width / 2;
     const centerY = buttonRect.top + buttonRect.height / 2;
@@ -450,9 +459,7 @@ class LineUpActivity implements Activity {
   }
 
   private connectCar(drag: DragState, slot: HTMLElement, slotIndex: number): void {
-    if (!this.context || !this.board) {
-      return;
-    }
+    if (!this.context || !this.board) return;
 
     drag.button.classList.remove('is-dragging');
     drag.button.classList.add('is-connected');
@@ -463,29 +470,40 @@ class LineUpActivity implements Activity {
 
     const originalRect = drag.button.getBoundingClientRect();
     const slotRect = slot.getBoundingClientRect();
-    const currentTransform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.05)`;
+    const currentTransform = `translate3d(${drag.deltaX}px, ${drag.deltaY}px, 0) scale(1.14)`;
     const targetX =
       slotRect.left + slotRect.width / 2 -
       (originalRect.left - drag.deltaX + originalRect.width / 2);
     const targetY =
       slotRect.top + slotRect.height / 2 -
       (originalRect.top - drag.deltaY + originalRect.height / 2);
-    const targetTransform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0.92)`;
+    const targetTransform = `translate3d(${targetX}px, ${targetY}px, 0) scale(0.95)`;
 
     const animation = drag.button.animate(
       [
         { transform: currentTransform },
         { transform: targetTransform },
       ],
-      { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
+      { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
     );
     this.trackAnimation(animation, drag.button, () => {
       drag.button.style.transform = targetTransform;
       animation.cancel();
     });
 
-    this.context.sfx.play('tick');
-    this.context.speech.speak(drag.carId === 'red' ? 'fireTruck' : 'car');
+    // 数の数唱音（1, 2, 3, 4）
+    const countVocabs: VocabKey[] = ['count1', 'count2', 'count3', 'count4'];
+    const currentCountVocab = countVocabs[slotIndex] ?? 'count1';
+
+    this.context.sfx.play('snap');
+    this.context.sfx.playScale(slotIndex * 2);
+    this.context.speech.speak(currentCountVocab);
+
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `✨ ${slotIndex + 1} ${getI18nText('lineUpConnected', currentLang)}`;
+    }
+
     this.sparkleAt(slot);
 
     if (this.occupiedSlots.size === TRAIN_LENGTH) {
@@ -494,14 +512,17 @@ class LineUpActivity implements Activity {
   }
 
   private finishTrain(): void {
-    if (!this.context || !this.board || this.roundFinishing) {
-      return;
-    }
+    if (!this.context || !this.board || this.roundFinishing) return;
 
     this.roundFinishing = true;
     this.context.notifyTaskComplete();
-    this.context.sfx.play('chime');
-    this.context.speech.speak('wellDone');
+    this.context.sfx.play('fanfare');
+    this.context.speech.speak('depart');
+
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🎉 ${getI18nText('lineUpAllAboard', currentLang)}`;
+    }
 
     const connectedButtons = this.connected
       .map((carId) => this.carButtons.get(carId))
@@ -512,8 +533,10 @@ class LineUpActivity implements Activity {
         this.startNewRound();
         return;
       }
-      const travel = this.board.clientWidth + 300;
-      const animations: Animation[] = [];
+      this.context?.sfx.play('trainWhistle');
+      this.context?.sfx.play('engine');
+
+      const travel = this.board.clientWidth + 450;
       for (const button of connectedButtons) {
         const base = button.style.transform;
         const animation = button.animate(
@@ -521,25 +544,33 @@ class LineUpActivity implements Activity {
             { transform: `${base} translateX(0)` },
             { transform: `${base} translateX(${travel}px)` },
           ],
-          { duration: 1_600, easing: 'ease-in-out', fill: 'forwards' },
+          { duration: 1800, easing: 'cubic-bezier(0.45, 0, 0.55, 1)', fill: 'forwards' },
         );
         this.trackAnimation(animation, button);
-        animations.push(animation);
       }
-      this.context?.sfx.play('engine');
-    }, 1_100);
+    }, 1000);
 
     this.schedule(() => {
       this.context?.sfx.play('applause');
-    }, 1_700);
+      if (this.particles && this.board) {
+        const rect = this.board.getBoundingClientRect();
+        this.particles.emitCelebration(rect.width / 2, rect.height / 2);
+        this.particles.emitFlowers(rect.width / 2, rect.height / 2, 14);
+      }
+    }, 1600);
 
-    this.schedule(() => this.startNewRound(), 2_600);
+    this.schedule(() => this.startNewRound(), 3000);
   }
 
   private startNewRound(): void {
     this.roundFinishing = false;
     this.connected.length = 0;
     this.occupiedSlots.clear();
+
+    if (this.banner && this.context) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `🚂 ${getI18nText('lineUpHint', currentLang)}`;
+    }
 
     for (const button of this.carButtons.values()) {
       button.dataset.connected = '';
@@ -552,7 +583,6 @@ class LineUpActivity implements Activity {
 
     this.cancelAnimations();
     this.layoutCars();
-    this.showHint();
   }
 
   private bounceCar(drag: DragState): void {
@@ -563,10 +593,7 @@ class LineUpActivity implements Activity {
     const animation = drag.button.animate(
       [
         { transform: `${from} scale(1)` },
-        {
-          transform: 'translate3d(0, 0, 0) scale(1.07)',
-          offset: 0.55,
-        },
+        { transform: 'translate3d(0, 0, 0) scale(1.08)', offset: 0.55 },
         { transform: 'translate3d(0, 0, 0) scale(1)' },
       ],
       { duration: 320, easing: 'ease-out' },
@@ -584,8 +611,7 @@ class LineUpActivity implements Activity {
           { transform: `${from} rotate(0deg)` },
           { transform: `${from} rotate(-4deg)`, offset: 0.2 },
           { transform: `${from} rotate(4deg)`, offset: 0.38 },
-          { transform: `${from} rotate(-3deg)`, offset: 0.54 },
-          { transform: `${from} rotate(2deg)`, offset: 0.68 },
+          { transform: `${from} rotate(4deg)`, offset: 0.54 },
           { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
         ]
       : [
@@ -593,40 +619,35 @@ class LineUpActivity implements Activity {
           { transform: 'translate3d(0, 0, 0)' },
         ];
     const animation = drag.button.animate(keyframes, {
-      duration: shake ? 620 : 360,
+      duration: shake ? 580 : 360,
       easing: 'ease-out',
     });
     this.trackAnimation(animation, drag.button);
   }
 
   private sparkleAt(element: HTMLElement): void {
-    if (!this.particles || !this.board) {
-      return;
-    }
+    if (!this.particles || !this.board) return;
 
     const boardRect = this.board.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
     this.particles.emitSparkles(
       rect.left - boardRect.left + rect.width / 2,
       rect.top - boardRect.top + rect.height / 2,
-      8,
+      12,
       '#ffd740',
     );
-  }
-
-  private showHint(): void {
-    const hint = this.board?.querySelector<HTMLElement>('.line-up-activity__hint');
-    if (!hint) {
-      return;
-    }
-
-    hint.classList.add('is-visible');
-    this.schedule(() => hint.classList.remove('is-visible'), 2_400);
+    this.particles.emitStars(
+      rect.left - boardRect.left + rect.width / 2,
+      rect.top - boardRect.top + rect.height / 2,
+      8,
+    );
   }
 
   private releasePointer(drag: DragState): void {
     if (drag.button.hasPointerCapture(drag.pointerId)) {
-      drag.button.releasePointerCapture(drag.pointerId);
+      try {
+        drag.button.releasePointerCapture(drag.pointerId);
+      } catch {}
     }
   }
 
@@ -637,9 +658,7 @@ class LineUpActivity implements Activity {
   ): void {
     this.animations.add(animation);
     const previous = this.carAnimations.get(button);
-    if (previous) {
-      previous.cancel();
-    }
+    if (previous) previous.cancel();
     this.carAnimations.set(button, animation);
     const remove = (): void => {
       this.animations.delete(animation);
@@ -654,12 +673,11 @@ class LineUpActivity implements Activity {
 
   private cancelCarAnimation(button: HTMLButtonElement): void {
     const animation = this.carAnimations.get(button);
-    if (!animation) {
-      return;
+    if (animation) {
+      animation.cancel();
+      this.animations.delete(animation);
+      this.carAnimations.delete(button);
     }
-    animation.cancel();
-    this.animations.delete(animation);
-    this.carAnimations.delete(button);
   }
 
   private cancelAnimations(): void {
@@ -687,4 +705,7 @@ function jitterNumber(amount: number): number {
   return (Math.random() * 2 - 1) * amount;
 }
 
+export function createLineUpActivity(): Activity {
+  return new LineUpActivity();
+}
 export const lineUpActivity: Activity = new LineUpActivity();

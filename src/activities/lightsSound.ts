@@ -1,55 +1,30 @@
+import bgNight from '../assets/bg_night.webp';
 import carBlue from '../assets/car_blue.svg';
 import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
 import carYellow from '../assets/car_yellow.svg';
 import menuIcon from '../assets/menu_lights-sound.svg';
 import type { Activity, ActivityContext } from '../core/activity';
-import type { VocabKey } from '../core/vocab';
+import { getI18nText } from '../core/i18n';
 import { ParticleSystem } from '../core/particles';
 import type { SfxName } from '../core/sfx';
+import type { VocabKey } from '../core/vocab';
 
 interface SoundCar {
   id: string;
   car: string;
-  label: string;
+  nameJa: string;
   sfx: SfxName;
   vocab: VocabKey;
   beamColor: string;
+  scaleIndex: number;
 }
 
 const SOUND_CARS: readonly SoundCar[] = [
-  {
-    id: 'red',
-    car: carRed,
-    label: 'しょうぼうしゃ',
-    sfx: 'siren',
-    vocab: 'siren',
-    beamColor: '255 61 48',
-  },
-  {
-    id: 'blue',
-    car: carBlue,
-    label: 'パトカー',
-    sfx: 'siren',
-    vocab: 'siren',
-    beamColor: '68 138 255',
-  },
-  {
-    id: 'yellow',
-    car: carYellow,
-    label: 'ダンプカー',
-    sfx: 'horn',
-    vocab: 'hornSound',
-    beamColor: '255 215 64',
-  },
-  {
-    id: 'green',
-    car: carGreen,
-    label: 'トラック',
-    sfx: 'horn',
-    vocab: 'hornSound',
-    beamColor: '105 240 174',
-  },
+  { id: 'red', car: carRed, nameJa: 'しょうぼうしゃ', sfx: 'siren', vocab: 'siren', beamColor: '255, 61, 48', scaleIndex: 0 },
+  { id: 'blue', car: carBlue, nameJa: 'パトカー', sfx: 'policeSiren', vocab: 'policeSound', beamColor: '68, 138, 255', scaleIndex: 2 },
+  { id: 'yellow', car: carYellow, nameJa: 'ダンプカー', sfx: 'horn', vocab: 'hornSound', beamColor: '255, 215, 64', scaleIndex: 4 },
+  { id: 'green', car: carGreen, nameJa: 'トラック', sfx: 'horn', vocab: 'hornSound', beamColor: '105, 240, 174', scaleIndex: 7 },
 ];
 
 const STYLES = `
@@ -61,37 +36,63 @@ const STYLES = `
     align-items: center;
     overflow: hidden;
     padding:
-      max(104px, calc(env(safe-area-inset-top) + 92px))
+      max(92px, calc(env(safe-area-inset-top) + 80px))
       max(24px, calc(env(safe-area-inset-right) + 18px))
       max(22px, calc(env(safe-area-inset-bottom) + 18px))
       max(24px, calc(env(safe-area-inset-left) + 18px));
-    background:
-      radial-gradient(circle at 78% 12%, rgb(255 224 130 / 22%), transparent 22%),
-      radial-gradient(circle at 20% 85%, rgb(105 240 174 / 14%), transparent 30%),
-      linear-gradient(180deg, #232a3d 0%, #2b3248 60%, #3d4459 100%);
+    background: #141b2b url("${bgNight}") center / cover no-repeat;
     touch-action: none;
+  }
+
+  /* Status Banner */
+  .lights-sound-activity__banner {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 26px;
+    border: 4px solid #ffffff;
+    border-radius: 30px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 35%);
+    font-size: clamp(15px, 2.2vw, 22px);
+    font-weight: 800;
+    color: #15334a;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   .lights-sound-activity__moon {
     position: absolute;
-    top: max(76px, calc(env(safe-area-inset-top) + 64px));
-    right: max(56px, calc(env(safe-area-inset-right) + 44px));
-    width: clamp(44px, 6vw, 72px);
+    top: max(72px, calc(env(safe-area-inset-top) + 60px));
+    right: max(48px, calc(env(safe-area-inset-right) + 36px));
+    width: clamp(52px, 7vw, 84px);
     aspect-ratio: 1;
     border-radius: 50%;
     background: #ffe082;
-    box-shadow: 0 0 28px rgb(255 224 130 / 55%);
+    box-shadow: 0 0 36px rgb(255 224 130 / 65%), 0 0 70px rgb(255 215 64 / 35%);
     pointer-events: none;
+    animation: moonGlow 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes moonGlow {
+    from { transform: scale(1); filter: brightness(1); }
+    to { transform: scale(1.06); filter: brightness(1.2); }
   }
 
   .lights-sound-activity__star {
     position: absolute;
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #ffffff;
-    opacity: 0.7;
+    opacity: 0.8;
     pointer-events: none;
+    box-shadow: 0 0 8px #ffffff;
   }
 
   .lights-sound-activity__row {
@@ -99,113 +100,106 @@ const STYLES = `
     z-index: 2;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(14px, 3vw, 34px);
-    width: min(860px, 94%);
-    height: min(62vh, 520px);
+    gap: clamp(14px, 3.5vw, 36px);
+    width: min(880px, 94%);
+    height: min(64vh, 530px);
     align-self: center;
   }
 
   .lights-sound-activity__car {
     position: relative;
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     min-width: 80px;
     min-height: 80px;
-    padding: clamp(6px, 1.2vw, 14px);
-    place-items: center;
-    border: 4px solid rgb(255 255 255 / 18%);
-    border-radius: clamp(22px, 3vw, 34px);
-    background: rgb(255 255 255 / 8%);
-    box-shadow: 0 12px 24px rgb(0 0 0 / 28%);
+    padding: clamp(8px, 1.4vw, 16px);
+    border: 4px solid rgb(255 255 255 / 24%);
+    border-radius: clamp(24px, 3.5vw, 36px);
+    background: rgb(255 255 255 / 12%);
+    box-shadow: 0 14px 28px rgb(0 0 0 / 35%);
     cursor: pointer;
     touch-action: none;
+    transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), background 200ms ease, border-color 200ms ease;
+  }
+
+  .lights-sound-activity__car:active {
+    transform: scale(0.94);
   }
 
   .lights-sound-activity__car img {
     width: auto;
-    height: 100%;
-    max-height: 118px;
+    height: 75%;
+    max-height: 125px;
     object-fit: contain;
-    filter: drop-shadow(0 6px 8px rgb(0 0 0 / 40%));
+    filter: drop-shadow(0 8px 12px rgb(0 0 0 / 50%));
+    transition: filter 200ms ease;
   }
 
+  .car-label-tag {
+    margin-top: 6px;
+    padding: 4px 14px;
+    border: 2px solid rgb(255 255 255 / 40%);
+    border-radius: 12px;
+    background: rgb(255 255 255 / 20%);
+    color: #ffffff;
+    font-size: clamp(12px, 1.6vw, 16px);
+    font-weight: 800;
+    pointer-events: none;
+  }
+
+  /* Headlight Beam */
   .lights-sound-activity__beam {
     position: absolute;
-    bottom: 60%;
-    left: 72%;
-    width: 150px;
-    height: 150px;
+    bottom: 50%;
+    left: 70%;
+    width: 170px;
+    height: 170px;
     border-radius: 50%;
     background: radial-gradient(
       circle,
-      rgb(var(--beam-color) / 80%) 0%,
-      rgb(var(--beam-color) / 28%) 42%,
+      rgba(var(--beam-color), 0.95) 0%,
+      rgba(var(--beam-color), 0.35) 40%,
       transparent 70%
     );
     opacity: 0;
     pointer-events: none;
-    transform: translateX(-6px);
   }
 
   .lights-sound-activity__car.is-lighting .lights-sound-activity__beam {
     animation: ls-beam 900ms ease-out forwards;
   }
 
+  .lights-sound-activity__car.is-lighting {
+    border-color: rgba(var(--beam-color), 0.9);
+    background: rgba(var(--beam-color), 0.25);
+  }
+
   .lights-sound-activity__car.is-hazarding img {
-    animation: ls-blink 300ms steps(2, jump-none) infinite;
-  }
-
-  .lights-sound-activity__label {
-    position: absolute;
-    left: 50%;
-    bottom: max(8px, calc(env(safe-area-inset-bottom) + 6px));
-    z-index: 3;
-    display: inline-block;
-    padding: 6px 20px;
-    border: 3px solid rgb(255 255 255 / 30%);
-    border-radius: 18px;
-    background: rgb(255 255 255 / 14%);
-    color: #ffffff;
-    font-size: clamp(13px, 1.8vw, 18px);
-    font-weight: 700;
-    opacity: 0;
-    transform: translate(-50%, 8px);
-    transition: opacity 200ms ease, transform 200ms ease;
-    white-space: nowrap;
-  }
-
-  .lights-sound-activity__label.is-visible {
-    opacity: 1;
-    transform: translate(-50%, 0);
+    animation: ls-blink 260ms steps(2, jump-none) 6;
   }
 
   @keyframes ls-beam {
     0% {
       opacity: 0;
-      transform: translateX(-6px) scale(0.5);
+      transform: translateX(-10px) scale(0.5);
     }
-    18% {
+    20% {
       opacity: 1;
     }
     100% {
       opacity: 0;
-      transform: translateX(30px) scale(1.6);
+      transform: translateX(45px) scale(1.8);
     }
   }
 
   @keyframes ls-blink {
-    0%,
-    100% {
+    0%, 100% {
       filter: brightness(1);
     }
     50% {
-      filter: brightness(2.6) saturate(1.4);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .lights-sound-activity__car.is-lighting .lights-sound-activity__beam,
-    .lights-sound-activity__car.is-hazarding img {
-      animation: none;
+      filter: brightness(2.8) saturate(1.5);
     }
   }
 `;
@@ -216,16 +210,17 @@ class LightsSoundActivity implements Activity {
 
   private context: ActivityContext | null = null;
   private root: HTMLElement | null = null;
+  private banner: HTMLDivElement | null = null;
   private listeners: AbortController | null = null;
   private particles: ParticleSystem | null = null;
-  private readonly timers = new Set<number>();
-  private readonly labelTimers = new Map<string, number>();
+  private tapCount = 0;
 
   mount(context: ActivityContext): void {
     this.unmount();
     this.context = context;
     this.root = context.root;
     this.listeners = new AbortController();
+    this.tapCount = 0;
 
     const style = document.createElement('style');
     style.textContent = STYLES;
@@ -233,16 +228,22 @@ class LightsSoundActivity implements Activity {
     const stage = document.createElement('div');
     stage.className = 'lights-sound-activity';
 
+    const currentLang = context.speech.getLanguage();
+    const banner = document.createElement('div');
+    banner.className = 'lights-sound-activity__banner';
+    banner.textContent = `🌙 ${getI18nText('lightsSoundHint', currentLang)}`;
+    this.banner = banner;
+
     const moon = document.createElement('div');
     moon.className = 'lights-sound-activity__moon';
     moon.setAttribute('aria-hidden', 'true');
 
-    const stars = Array.from({ length: 10 }, (_, index) => {
+    const stars = Array.from({ length: 14 }, (_, index) => {
       const star = document.createElement('span');
       star.className = 'lights-sound-activity__star';
-      star.style.left = `${(index * 97) % 92 + 2}%`;
-      star.style.top = `${((index * 53) % 34) + 4}%`;
-      star.style.opacity = String(0.35 + ((index * 13) % 40) / 100);
+      star.style.left = `${(index * 83) % 92 + 3}%`;
+      star.style.top = `${((index * 47) % 36) + 4}%`;
+      star.style.opacity = String(0.4 + ((index * 17) % 50) / 100);
       return star;
     });
 
@@ -255,7 +256,8 @@ class LightsSoundActivity implements Activity {
       button.type = 'button';
       button.className = 'lights-sound-activity__car';
       button.dataset.carId = item.id;
-      button.setAttribute('aria-label', item.label);
+      button.setAttribute('aria-label', item.nameJa);
+      button.style.setProperty('--beam-color', item.beamColor);
 
       const car = document.createElement('img');
       car.src = item.car;
@@ -264,126 +266,78 @@ class LightsSoundActivity implements Activity {
 
       const beam = document.createElement('span');
       beam.className = 'lights-sound-activity__beam';
-      beam.style.setProperty('--beam-color', item.beamColor);
 
-      button.append(car, beam);
-      button.addEventListener('pointerdown', this.handleCarPointerDown, {
+      const tag = document.createElement('span');
+      tag.className = 'car-label-tag';
+      tag.textContent = item.nameJa;
+
+      button.append(car, beam, tag);
+      button.addEventListener('pointerdown', (e) => this.handleCarTap(e, item, button), {
         signal: this.listeners.signal,
       });
       row.append(button);
     }
 
-    const label = document.createElement('div');
-    label.className = 'lights-sound-activity__label';
-    label.setAttribute('aria-live', 'polite');
-
-    stage.append(moon, ...stars, row, label);
+    stage.append(banner, moon, ...stars, row);
     context.root.replaceChildren(style, stage);
 
     this.particles = new ParticleSystem(stage);
-
-    label.textContent = 'タップしてね';
-    this.showLabel(label, 2_400);
+    context.speech.speak('nightExplore');
   }
 
   unmount(): void {
     this.listeners?.abort();
     this.listeners = null;
-    for (const timer of this.timers) {
-      window.clearTimeout(timer);
-    }
-    this.timers.clear();
-    for (const timer of this.labelTimers.values()) {
-      window.clearTimeout(timer);
-    }
-    this.labelTimers.clear();
     this.particles?.destroy();
     this.particles = null;
     this.root?.replaceChildren();
+    this.banner = null;
     this.root = null;
     this.context = null;
   }
 
-  private readonly handleCarPointerDown = (event: PointerEvent): void => {
+  private handleCarTap(event: PointerEvent, item: SoundCar, button: HTMLButtonElement): void {
     event.preventDefault();
-    if (!this.context) {
-      return;
-    }
+    if (!this.context) return;
 
-    const target = event.currentTarget;
-    if (!(target instanceof HTMLButtonElement)) {
-      return;
-    }
+    this.tapCount++;
+    this.context.notifyTaskComplete();
 
-    const carId = target.dataset.carId;
-    const item = SOUND_CARS.find((candidate) => candidate.id === carId);
-    if (!item) {
-      return;
-    }
-
-    const label = this.root?.querySelector<HTMLElement>(
-      '.lights-sound-activity__label',
-    ) ?? undefined;
+    // 音声＆効果音
     this.context.sfx.play(item.sfx);
+    this.context.sfx.playScale((this.tapCount * 2) % 8); // ドレミ音階が楽しく巡回
     this.context.speech.speak(item.vocab);
-    this.triggerLight(target, item, label);
-  };
 
-  private triggerLight(
-    button: HTMLButtonElement,
-    item: SoundCar,
-    label: HTMLElement | undefined,
-  ): void {
+    if (this.banner) {
+      const currentLang = this.context.speech.getLanguage();
+      this.banner.textContent = `✨ ${getI18nText('lightsSoundPlay', currentLang)}`;
+    }
+
+    // 光ビーム演出
     button.classList.remove('is-lighting', 'is-hazarding');
+    void button.offsetWidth; // reflow
+    button.classList.add('is-lighting');
 
     if (item.id === 'red' || item.id === 'blue') {
       button.classList.add('is-hazarding');
-      this.schedule(() => {
-        button.classList.remove('is-hazarding');
-      }, 1_800);
-    } else {
-      button.classList.add('is-lighting');
-      this.schedule(() => {
-        button.classList.remove('is-lighting');
-      }, 950);
     }
 
-    if (label) {
-      this.showLabel(label, 1_600);
-    }
+    // 車のジャンプ
+    button.classList.remove('car-jumping');
+    void button.offsetWidth;
+    button.classList.add('car-jumping');
 
-    if (this.particles && this.root) {
-      const rootRect = this.root.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
-      this.particles.emitSparkles(
-        buttonRect.left - rootRect.left + buttonRect.width / 2,
-        buttonRect.top - rootRect.top + 18,
-        10,
-        `rgb(${item.beamColor})`,
-      );
-    }
-  }
-
-  private showLabel(label: HTMLElement, durationMs: number): void {
-    label.classList.add('is-visible');
-    const previous = this.labelTimers.get('label');
-    if (previous) {
-      window.clearTimeout(previous);
-    }
-    const timer = window.setTimeout(() => {
-      label.classList.remove('is-visible');
-      this.labelTimers.delete('label');
-    }, durationMs);
-    this.labelTimers.set('label', timer);
-  }
-
-  private schedule(callback: () => void, delay: number): void {
-    const timer = window.setTimeout(() => {
-      this.timers.delete(timer);
-      callback();
-    }, delay);
-    this.timers.add(timer);
+    // パーティクル（音符・星・光）
+    const rect = button.getBoundingClientRect();
+    const cX = rect.left + rect.width * 0.7;
+    const cY = rect.top + rect.height * 0.35;
+    this.particles?.emitMusicNotes(cX, cY, 4);
+    this.particles?.emitSparkles(cX, cY, 14, `rgb(${item.beamColor})`);
+    this.particles?.emitStars(cX, cY, 8);
   }
 }
 
+export function createLightsSoundActivity(): Activity {
+  return new LightsSoundActivity();
+}
 export const lightsSoundActivity: Activity = new LightsSoundActivity();

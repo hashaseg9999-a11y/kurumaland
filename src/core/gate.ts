@@ -1,19 +1,20 @@
+import { getI18nText } from './i18n';
 import { isLangMode, LANG_MODES, saveSettings, type Settings } from './settings';
-import type { SpeechService } from './speech';
+import type { Lang, SpeechService } from './speech';
 
 const DEFAULT_HOLD_DURATION_MS = 3_000;
 const MOVE_TOLERANCE_PX = 16;
 const LANGUAGE_LABELS: Readonly<Record<Settings['langMode'], string>> = {
   ja: '日本語 (ja)',
-  en: '英語 (en)',
-  th: 'タイ語 (th)',
-  rotate: '順番 (ja → en → th)',
+  en: 'English (en)',
+  th: 'ภาษาไทย (th)',
+  rotate: 'Rotate (ja → en → th)',
 };
 const END_TIMER_CHOICES = [
-  { value: 'none', minutes: null, label: 'なし' },
-  { value: '10', minutes: 10, label: '10分' },
-  { value: '20', minutes: 20, label: '20分' },
-  { value: '30', minutes: 30, label: '30分' },
+  { value: 'none', minutes: null, labelJa: 'なし', labelTh: 'ไม่มี', labelEn: 'None' },
+  { value: '10', minutes: 10, labelJa: '10分', labelTh: '10 นาที', labelEn: '10 min' },
+  { value: '20', minutes: 20, labelJa: '20分', labelTh: '20 นาที', labelEn: '20 min' },
+  { value: '30', minutes: 30, labelJa: '30分', labelTh: '30 นาที', labelEn: '30 min' },
 ] as const;
 
 export interface ParentalGateOptions {
@@ -169,9 +170,11 @@ export function mountParentalSettingsGate(
   panel.setAttribute('aria-modal', 'true');
   panel.setAttribute('aria-labelledby', 'settings-title');
 
+  const currentLang: Lang = speech.getLanguage();
+
   const title = document.createElement('h2');
   title.id = 'settings-title';
-  title.textContent = '保護者向け設定';
+  title.textContent = getI18nText('parentalSettingsTitle', currentLang);
 
   const summary = document.createElement('p');
   summary.className = 'settings-summary';
@@ -182,7 +185,7 @@ export function mountParentalSettingsGate(
 
   const languageLabel = document.createElement('label');
   languageLabel.htmlFor = 'settings-language-mode';
-  languageLabel.textContent = '発話する言語';
+  languageLabel.textContent = getI18nText('parentalLanguageLabel', currentLang);
 
   const languageSelect = document.createElement('select');
   languageSelect.id = 'settings-language-mode';
@@ -202,7 +205,7 @@ export function mountParentalSettingsGate(
 
   const timerLabel = document.createElement('label');
   timerLabel.htmlFor = 'settings-end-timer';
-  timerLabel.textContent = 'おしまいタイマー';
+  timerLabel.textContent = getI18nText('parentalTimerLabel', currentLang);
 
   const timerSelect = document.createElement('select');
   timerSelect.id = 'settings-end-timer';
@@ -210,7 +213,8 @@ export function mountParentalSettingsGate(
   for (const choice of END_TIMER_CHOICES) {
     const option = document.createElement('option');
     option.value = choice.value;
-    option.textContent = choice.label;
+    const label = currentLang === 'th' ? choice.labelTh : currentLang === 'en' ? choice.labelEn : choice.labelJa;
+    option.textContent = label;
     timerSelect.append(option);
   }
 
@@ -219,17 +223,17 @@ export function mountParentalSettingsGate(
   const testSpeechButton = document.createElement('button');
   testSpeechButton.type = 'button';
   testSpeechButton.className = 'settings-close settings-test-speech';
-  testSpeechButton.textContent = 'テスト発話';
+  testSpeechButton.textContent = getI18nText('parentalTestSpeech', currentLang);
 
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'settings-close';
-  closeButton.textContent = '閉じる';
+  closeButton.textContent = getI18nText('parentalClose', currentLang);
 
   const resumeButton = document.createElement('button');
   resumeButton.type = 'button';
   resumeButton.className = 'settings-close settings-resume';
-  resumeButton.textContent = '遊びを再開';
+  resumeButton.textContent = getI18nText('parentalResume', currentLang);
   resumeButton.hidden = true;
 
   const actions = document.createElement('div');
@@ -239,10 +243,19 @@ export function mountParentalSettingsGate(
   const previousInert = new Map<HTMLElement, boolean>();
 
   const updateSummary = (): void => {
-    const timerLabel =
-      settings.endTimerMinutes === null ? 'なし' : String(settings.endTimerMinutes) + '分';
-    summary.textContent =
-      '言語：' + LANGUAGE_LABELS[settings.langMode] + '　おしまいタイマー：' + timerLabel;
+    const lang = speech.getLanguage();
+    const timerChoice = END_TIMER_CHOICES.find((c) => c.minutes === settings.endTimerMinutes);
+    const timerLabelText = timerChoice
+      ? (lang === 'th' ? timerChoice.labelTh : lang === 'en' ? timerChoice.labelEn : timerChoice.labelJa)
+      : 'None';
+    summary.textContent = `${LANGUAGE_LABELS[settings.langMode]} / ${timerLabelText}`;
+
+    title.textContent = getI18nText('parentalSettingsTitle', lang);
+    languageLabel.textContent = getI18nText('parentalLanguageLabel', lang);
+    timerLabel.textContent = getI18nText('parentalTimerLabel', lang);
+    testSpeechButton.textContent = getI18nText('parentalTestSpeech', lang);
+    closeButton.textContent = getI18nText('parentalClose', lang);
+    resumeButton.textContent = getI18nText('parentalResume', lang);
   };
 
   const setBackgroundInert = (isInert: boolean): void => {

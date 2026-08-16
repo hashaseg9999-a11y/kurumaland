@@ -4,19 +4,20 @@ import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
 import garageBlue from '../assets/garage_blue.svg';
 import type { Activity } from './activity';
-import type { Settings } from './settings';
+import { getI18nText, type I18nKey } from './i18n';
+import { saveSettings, type Settings } from './settings';
 import type { SfxService } from './sfx';
-import type { SpeechService } from './speech';
+import type { Lang, SpeechService } from './speech';
 
-const ACTIVITY_LABELS: Readonly<Record<string, string>> = {
-  signal: 'しんごうで GO!',
-  'color-garage': 'いろの しゃこ',
-  'big-small': 'おおきい・ちいさい',
-  trace: 'みちを なぞろう',
-  'car-wash': 'くるまあらい',
-  puzzle: 'くるま パズル',
-  'lights-sound': 'おとと ひかり',
-  'line-up': 'ならべて れっしゃ',
+const ACTIVITY_I18N_KEYS: Readonly<Record<string, I18nKey>> = {
+  signal: 'activitySignal',
+  'color-garage': 'activityColorGarage',
+  'big-small': 'activityBigSmall',
+  trace: 'activityTrace',
+  'car-wash': 'activityCarWash',
+  puzzle: 'activityPuzzle',
+  'lights-sound': 'activityLightsSound',
+  'line-up': 'activityLineUp',
 };
 
 interface ActivityRouterOptions {
@@ -25,6 +26,7 @@ interface ActivityRouterOptions {
   speech: SpeechService;
   sfx: SfxService;
   getSettings: () => Settings;
+  onSettingsChange?: (settings: Readonly<Settings>) => void;
   onTaskComplete(): void;
 }
 
@@ -35,6 +37,7 @@ export class ActivityRouter {
   private readonly sfx: SfxService;
   private readonly getSettings: () => Settings;
   private readonly onTaskComplete: () => void;
+  private readonly onSettingsChange?: (settings: Readonly<Settings>) => void;
   private currentActivity: Activity | null = null;
   private ending = false;
 
@@ -44,6 +47,7 @@ export class ActivityRouter {
     this.speech = options.speech;
     this.sfx = options.sfx;
     this.getSettings = options.getSettings;
+    this.onSettingsChange = options.onSettingsChange;
     this.onTaskComplete = options.onTaskComplete;
   }
 
@@ -59,6 +63,8 @@ export class ActivityRouter {
     this.unmountCurrentActivity();
     this.ending = false;
     this.root.replaceChildren();
+
+    const currentLang: Lang = this.speech.getLanguage();
 
     // Gentle fade-in for the menu screen.
     this.root.style.opacity = '0';
@@ -81,10 +87,36 @@ export class ActivityRouter {
     sunbeam.className = 'menu-sunbeam';
     this.root.append(sunbeam);
 
+    // Language Quick Switcher Bar
+    const langBar = document.createElement('div');
+    langBar.className = 'menu-lang-bar';
+    const langOptions: Array<{ code: Lang; label: string }> = [
+      { code: 'ja', label: '🇯🇵 JP' },
+      { code: 'th', label: '🇹🇭 TH' },
+      { code: 'en', label: '🇺🇸 EN' },
+    ];
+
+    for (const opt of langOptions) {
+      const langBtn = document.createElement('button');
+      langBtn.type = 'button';
+      langBtn.className = `menu-lang-btn ${currentLang === opt.code ? 'is-active' : ''}`;
+      langBtn.textContent = opt.label;
+      langBtn.setAttribute('aria-label', opt.label);
+      langBtn.addEventListener('click', () => {
+        this.sfx.play('pop');
+        const nextSettings = { ...this.getSettings(), langMode: opt.code };
+        saveSettings(nextSettings);
+        this.onSettingsChange?.(nextSettings);
+        this.showMenu();
+      });
+      langBar.append(langBtn);
+    }
+    this.root.append(langBar);
+
     // Header Title
     const title = document.createElement('h1');
     title.className = 'menu-title';
-    title.textContent = '✨ くるまランド ✨';
+    title.textContent = getI18nText('appTitle', currentLang);
     this.root.append(title);
 
     // Landscape & Animated Drive Track at Bottom
@@ -114,13 +146,16 @@ export class ActivityRouter {
     // Main 3D Card Grid
     const menu = document.createElement('nav');
     menu.className = 'menu-grid';
-    menu.setAttribute('aria-label', 'あそびをえらぶ');
+    menu.setAttribute('aria-label', getI18nText('chooseActivity', currentLang));
 
     for (const activity of this.activities) {
+      const i18nKey = ACTIVITY_I18N_KEYS[activity.id] ?? 'appTitle';
+      const label = getI18nText(i18nKey, currentLang);
+
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `menu-button menu-button--${activity.id}`;
-      button.setAttribute('aria-label', ACTIVITY_LABELS[activity.id] ?? activity.id);
+      button.setAttribute('aria-label', label);
 
       const iconWrap = document.createElement('div');
       iconWrap.className = 'menu-button__icon-wrap';
@@ -133,7 +168,7 @@ export class ActivityRouter {
 
       const badge = document.createElement('span');
       badge.className = 'menu-button__badge';
-      badge.textContent = ACTIVITY_LABELS[activity.id] ?? activity.id;
+      badge.textContent = label;
 
       button.append(iconWrap, badge);
 
