@@ -6,6 +6,7 @@ import garageBlue from '../assets/garage_blue.svg';
 import type { Activity } from './activity';
 import { getI18nText, type I18nKey } from './i18n';
 import { saveSettings, type Settings } from './settings';
+import { attachParallax, createSceneStage, playSceneTransition } from './scene3d';
 import type { SfxService } from './sfx';
 import type { Lang, SpeechService } from './speech';
 
@@ -39,6 +40,8 @@ export class ActivityRouter {
   private readonly onTaskComplete: () => void;
   private readonly onSettingsChange?: (settings: Readonly<Settings>) => void;
   private currentActivity: Activity | null = null;
+  private menuEffectsCleanup: (() => void) | null = null;
+  private activityEffectsCleanup: (() => void) | null = null;
   private ending = false;
 
   constructor(options: ActivityRouterOptions) {
@@ -62,30 +65,21 @@ export class ActivityRouter {
   showMenu = (): void => {
     this.unmountCurrentActivity();
     this.ending = false;
+    this.clearScreenEffects();
     this.root.replaceChildren();
+    this.root.style.opacity = '';
+    this.root.style.transition = '';
 
-    const currentLang: Lang = this.speech.getLanguage();
-
-    // Gentle fade-in for the menu screen.
-    this.root.style.opacity = '0';
-    this.root.style.transition = 'opacity 220ms ease';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.root.style.opacity = '1';
-      });
+    const scene = createSceneStage('menu-scene');
+    const stage = scene.stage;
+    this.root.append(scene.root);
+    this.menuEffectsCleanup = attachParallax(scene.root, {
+      maxTilt: 1,
+      strength: 10,
     });
 
-    // Floating Clouds Background
-    const cloud1 = document.createElement('div');
-    cloud1.className = 'menu-cloud cloud-1';
-    const cloud2 = document.createElement('div');
-    cloud2.className = 'menu-cloud cloud-2';
-    this.root.append(cloud1, cloud2);
-
-    // Sunbeam Header Background
-    const sunbeam = document.createElement('div');
-    sunbeam.className = 'menu-sunbeam';
-    this.root.append(sunbeam);
+    const currentLang: Lang = this.speech.getLanguage();
+    playSceneTransition(stage, 'enter');
 
     // Language Quick Switcher Bar
     const langBar = document.createElement('div');
@@ -107,17 +101,18 @@ export class ActivityRouter {
         const nextSettings = { ...this.getSettings(), langMode: opt.code };
         saveSettings(nextSettings);
         this.onSettingsChange?.(nextSettings);
+        document.dispatchEvent(new CustomEvent('settingschanged'));
         this.showMenu();
       });
       langBar.append(langBtn);
     }
-    this.root.append(langBar);
+    stage.append(langBar);
 
     // Header Title
     const title = document.createElement('h1');
     title.className = 'menu-title';
     title.textContent = getI18nText('appTitle', currentLang);
-    this.root.append(title);
+    stage.append(title);
 
     // Landscape & Animated Drive Track at Bottom
     const landscape = document.createElement('div');
@@ -141,7 +136,7 @@ export class ActivityRouter {
 
     road.append(drivingCar1, drivingCar2);
     landscape.append(hills, road);
-    this.root.append(landscape);
+    stage.append(landscape);
 
     // Main 3D Card Grid
     const menu = document.createElement('nav');
@@ -180,12 +175,13 @@ export class ActivityRouter {
       menu.append(button);
     }
 
-    this.root.append(menu);
+    stage.append(menu);
   };
 
   destroy(): void {
     this.unmountCurrentActivity();
     this.ending = false;
+    this.clearScreenEffects();
     this.root.replaceChildren();
     this.root.style.opacity = '';
     this.root.style.transition = '';
@@ -198,11 +194,13 @@ export class ActivityRouter {
 
     this.unmountCurrentActivity();
     this.ending = true;
+    this.clearScreenEffects();
     this.root.replaceChildren();
     this.root.style.opacity = '';
     this.root.style.transition = '';
 
     const screen = document.createElement('section');
+    const currentLang: Lang = this.speech.getLanguage();
     screen.className = 'ending-screen';
     screen.setAttribute('aria-label', 'おしまい。車たちはおやすみしています');
 
@@ -231,10 +229,28 @@ export class ActivityRouter {
       return car;
     });
 
-    scene.append(garage, ...returningCars);
+    const restingCar = document.createElement('div');
+    restingCar.className = 'ending-resting';
+    restingCar.setAttribute('aria-hidden', 'true');
+
+    const restingImage = document.createElement('img');
+    restingImage.src = garageBlue;
+    restingImage.alt = '';
+    restingImage.draggable = false;
+
+    const sleepingFace = document.createElement('span');
+    sleepingFace.textContent = '😴';
+    restingCar.append(restingImage, sleepingFace);
+    scene.append(garage, ...returningCars, restingCar);
     screen.append(background, scene);
 
+    const endingTitle = document.createElement('h1');
+    endingTitle.setAttribute('aria-live', 'polite');
+    endingTitle.textContent = getI18nText('endingMessage', currentLang);
+    screen.append(endingTitle);
+
     this.root.append(screen);
+    playSceneTransition(screen, 'enter');
     this.speech.speak('wellDone');
     this.sfx.play('applause');
   };
@@ -242,19 +258,18 @@ export class ActivityRouter {
   private openActivity(activity: Activity): void {
     this.unmountCurrentActivity();
     this.ending = false;
+    this.clearScreenEffects();
     this.root.replaceChildren();
 
-    // Gentle fade-in for the activity screen.
-    this.root.style.opacity = '0';
-    this.root.style.transition = 'opacity 200ms ease';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.root.style.opacity = '1';
-      });
+    const scene = createSceneStage('activity-scene');
+    const screen = scene.root;
+    const stage = scene.stage;
+    this.root.append(screen);
+    this.activityEffectsCleanup = attachParallax(screen, {
+      maxTilt: 0.65,
+      strength: 7,
     });
-
-    const screen = document.createElement('div');
-    screen.className = 'activity-screen';
+    playSceneTransition(stage, 'enter');
 
     const homeButton = document.createElement('button');
     homeButton.type = 'button';
@@ -267,11 +282,9 @@ export class ActivityRouter {
       this.showMenu();
     });
 
-    const stage = document.createElement('div');
-    stage.className = 'activity-stage';
+    screen.append(homeButton);
 
-    screen.append(stage, homeButton);
-    this.root.append(screen);
+    stage.classList.add('activity-stage');
 
     activity.mount({
       root: stage,
@@ -287,6 +300,13 @@ export class ActivityRouter {
     });
 
     this.currentActivity = activity;
+  }
+
+  private clearScreenEffects(): void {
+    this.menuEffectsCleanup?.();
+    this.menuEffectsCleanup = null;
+    this.activityEffectsCleanup?.();
+    this.activityEffectsCleanup = null;
   }
 
   private unmountCurrentActivity(): void {

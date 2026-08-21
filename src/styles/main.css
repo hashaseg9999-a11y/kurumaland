@@ -2,7 +2,7 @@
   color: #15334a;
   background: #d4f0ff;
   font-family:
-    "Zen Maru Gothic", "Fredoka", "Sarabun", "Leelawadee UI", "Thonburi", "Noto Sans Thai", "Hiragino Maru Gothic ProN", -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Leelawadee UI", "Sarabun", "Thonburi", "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
@@ -59,39 +59,188 @@ img {
 }
 
 .router-root {
-  background: linear-gradient(180deg, #64c8ff 0%, #aee3ff 55%, #e1f5ff 100%);
+  background: linear-gradient(180deg, #5ec4ff 0%, #a9e2ff 58%, #dff6ff 100%);
   overflow: hidden;
 }
 
-/* Floating Clouds */
-.menu-cloud {
+/* Shared CSS 3D scene foundation */
+.scene3d {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  perspective: min(118vw, 1000px);
+  perspective-origin: 50% 44%;
+}
+
+.scene3d-stage {
   position: absolute;
-  background: #ffffff;
-  border-radius: 50px;
-  opacity: 0.85;
-  filter: drop-shadow(0 6px 12px rgba(255, 255, 255, 0.4));
+  z-index: 2;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.scene3d-stage.is-entering,
+.scene3d-stage.is-exiting {
+  animation: scene-camera-enter 620ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.scene3d-stage.is-exiting {
+  animation-name: scene-camera-exit;
+}
+
+@keyframes scene-camera-enter {
+  from {
+    opacity: 0;
+    transform:
+      perspective(900px)
+      translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 190px)
+      rotateX(7.5deg)
+      scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      perspective(900px)
+      translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 0px)
+      rotateX(calc(var(--scene-tilt-x, 0) * 1deg))
+      rotateY(calc(var(--scene-tilt-y, 0) * 1deg));
+  }
+}
+
+@keyframes scene-camera-exit {
+  from {
+    opacity: 1;
+    transform:
+      perspective(900px)
+      translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 0px)
+      rotateX(calc(var(--scene-tilt-x, 0) * 1deg))
+      rotateY(calc(var(--scene-tilt-y, 0) * 1deg));
+  }
+
+  to {
+    opacity: 0;
+    transform:
+      perspective(900px)
+      translate3d(calc(var(--parallax-x, 0) * -14px), calc(var(--parallax-y, 0) * -10px), 170px)
+      rotateX(6deg)
+      scale(0.96);
+  }
+}
+
+.scene3d-sky,
+.scene3d-cloud-band,
+.scene3d-sun,
+.scene3d-hills,
+.scene3d-road {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
-.cloud-1 {
-  top: 6%;
-  left: -120px;
-  width: 160px;
-  height: 50px;
-  animation: floatCloud 28s linear infinite;
+.scene3d-sky {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.42), transparent 28%),
+    linear-gradient(180deg, #58c4ff 0%, #9fdcff 52%, #e8f8ff 100%);
 }
 
-.cloud-2 {
-  top: 14%;
-  left: -200px;
-  width: 220px;
-  height: 65px;
-  animation: floatCloud 42s linear infinite 12s;
+.scene3d-cloud-band {
+  transform: translateZ(-180px);
 }
 
-@keyframes floatCloud {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(100vw + 300px)); }
+.scene3d-cloud {
+  position: absolute;
+  top: var(--cloud-y, 12%);
+  left: -24vw;
+  width: calc(clamp(110px, 16vw, 220px) * var(--cloud-scale, 1));
+  height: calc(clamp(38px, 5.2vw, 72px) * var(--cloud-scale, 1));
+  border-radius: 100px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 22px -10px 0 -6px #fff, -26px 2px 0 -11px #fff, 0 18px 34px rgb(21 51 74 / 7%);
+  opacity: 0.78;
+  animation: scene-cloud-drift linear infinite;
+}
+
+@keyframes scene-cloud-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(148vw, 0, 0); }
+}
+
+.scene3d-sun {
+  top: max(-42px, calc(env(safe-area-inset-top) - 48px));
+  right: min(-34px, calc(env(safe-area-inset-right) - 40px));
+  left: auto;
+  bottom: auto;
+  width: clamp(150px, 21vw, 260px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,236,150,0.95), rgba(255,214,102,0.35) 46%, transparent 70%);
+  filter: blur(0.4px);
+  transform: translateZ(-240px);
+}
+
+.scene3d-hills {
+  top: auto;
+  height: 44vh;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  transform-style: preserve-3d;
+}
+
+.scene3d-hills-far {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 17% 100%, #a5dfb2 0 31%, transparent 32%),
+    radial-gradient(circle at 43% 104%, #8ed3a0 0 37%, transparent 38%),
+    radial-gradient(circle at 76% 101%, #a8e2ae 0 33%, transparent 34%);
+  filter: saturate(0.92);
+  opacity: 0.82;
+  transform: translateZ(-90px) translateY(calc(var(--parallax-y, 0) * 4px));
+}
+
+.scene3d-hills-near {
+  z-index: 1;
+  height: 34vh;
+  background:
+    radial-gradient(circle at 5% 108%, #68bd80 0 39%, transparent 40%),
+    radial-gradient(circle at 34% 114%, #57b571 0 45%, transparent 46%),
+    radial-gradient(circle at 71% 109%, #67c47f 0 41%, transparent 42%),
+    radial-gradient(circle at 98% 116%, #55ad6f 0 38%, transparent 39%);
+  transform: translateZ(-36px) translateY(calc(var(--parallax-y, 0) * 7px));
+}
+
+.scene3d-road {
+  top: auto;
+  z-index: 1;
+  height: max(64px, calc(env(safe-area-inset-bottom) + 50px));
+  overflow: hidden;
+  background: #465064;
+  box-shadow: inset 0 8px 20px rgb(21 51 74 / 15%);
+  transform: translateZ(12px);
+}
+
+.scene3d-road::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: #ffd166;
+}
+
+.scene3d-road-lane {
+  position: absolute;
+  top: 50%;
+  left: -12vw;
+  width: 100%;
+  height: 5px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(90deg, #f8f7f2 0 42px, transparent 42px 86px);
+  animation: road-lane-flow 1.8s linear infinite;
+}
+
+@keyframes road-lane-flow {
+  to { transform: translate(86px, -50%); }
 }
 
 /* Header Title Banner */
@@ -99,7 +248,7 @@ img {
   position: absolute;
   top: max(14px, env(safe-area-inset-top));
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(52px);
   z-index: 10;
   margin: 0;
   padding: 8px 32px;
@@ -120,6 +269,7 @@ img {
 
 /* Language Quick Switcher Bar */
 .menu-lang-bar {
+  transform: translateZ(68px);
   position: absolute;
   top: max(14px, env(safe-area-inset-top));
   left: max(18px, env(safe-area-inset-left));
@@ -133,6 +283,11 @@ img {
   border-radius: 24px;
   border: 3px solid #ffffff;
   box-shadow: 0 4px 14px rgb(21 51 74 / 15%);
+}
+
+.menu-lang-bar,
+.menu-title {
+  will-change: transform;
 }
 
 .menu-lang-btn {
@@ -169,6 +324,7 @@ img {
   height: 140px;
   pointer-events: none;
   z-index: 1;
+  transform: translateZ(-16px);
 }
 
 .menu-hills {
@@ -238,6 +394,14 @@ img {
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: clamp(14px, 2.4vw, 28px);
   z-index: 2;
+  transform-style: preserve-3d;
+  transform:
+    translate3d(
+      calc(var(--parallax-x, 0) * -8px),
+      calc(var(--parallax-y, 0) * -6px),
+      24px
+    );
+  will-change: transform;
 }
 
 .menu-button {
@@ -259,6 +423,23 @@ img {
   cursor: pointer;
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
   overflow: visible;
+  transform-style: preserve-3d;
+  transform:
+    translateZ(var(--card-depth, 30px))
+    rotateX(calc(var(--scene-tilt-x, 0) * -0.35deg))
+    rotateY(calc(var(--scene-tilt-y, 0) * 0.45deg));
+}
+
+.menu-button:nth-child(odd) {
+  --card-depth: 38px;
+}
+
+.menu-button:nth-child(3n) {
+  --card-depth: 24px;
+}
+
+.menu-button:nth-child(5n) {
+  --card-depth: 48px;
 }
 
 /* Card Themes */
@@ -311,14 +492,20 @@ img {
 }
 
 .menu-button:hover {
-  transform: translateY(-5px) scale(1.03);
+  transform:
+    translateY(-5px)
+    translateZ(calc(var(--card-depth, 30px) + 22px))
+    scale(1.03);
   box-shadow:
     0 16px 0 var(--card-shadow, #b0bec5),
     0 22px 36px rgb(21 51 74 / 22%);
 }
 
 .menu-button:active {
-  transform: translateY(6px) scale(0.96);
+  transform:
+    translateY(4px)
+    translateZ(calc(var(--card-depth, 30px) - 14px))
+    scale(0.97);
   box-shadow: 0 4px 0 var(--card-shadow, #b0bec5);
 }
 
@@ -338,6 +525,11 @@ img {
   max-height: 120px;
   object-fit: contain;
   filter: drop-shadow(0 6px 10px rgb(21 51 74 / 16%));
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-button:active .menu-button__icon-wrap img {
+  transform: scale(1.08) rotate(-1deg);
 }
 
 .menu-button__badge {
@@ -357,6 +549,21 @@ img {
 
 .activity-screen {
   background: #dff4ff;
+}
+
+.activity-scene .scene3d-sky {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.34), transparent 34%),
+    linear-gradient(180deg, #6ecaff 0%, #b5e7ff 58%, #e9f9ff 100%);
+}
+
+.activity-scene .scene3d-cloud-band {
+  opacity: 0.52;
+}
+
+.activity-scene .scene3d-hills {
+  height: 28vh;
+  bottom: 0;
 }
 
 .activity-stage {

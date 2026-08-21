@@ -22,6 +22,11 @@ export const I18N_STRINGS = {
     th: 'หมุนเป็นแนวนอนนะ',
     en: 'Please rotate sideways',
   },
+  endingMessage: {
+    ja: 'おしまい',
+    th: 'จบแล้ว',
+    en: 'All done',
+  },
 
   // アクティビティ名
   activitySignal: {

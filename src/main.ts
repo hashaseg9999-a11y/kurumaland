@@ -3,6 +3,7 @@ import './styles/main.css';
 import { activities } from './activities';
 import { EndSessionController } from './core/endSession';
 import { mountParentalSettingsGate } from './core/gate';
+import { getI18nText } from './core/i18n';
 import { ActivityRouter } from './core/router';
 import { loadSettings, saveSettings } from './core/settings';
 import { createSfxService } from './core/sfx';
@@ -47,7 +48,16 @@ rotateArrow.className = 'rotate-arrow';
 rotateArrow.textContent = '↻';
 
 const orientationMessage = document.createElement('p');
-orientationMessage.textContent = 'よこにしてね';
+orientationMessage.setAttribute('aria-live', 'polite');
+
+const updateOrientationText = (): void => {
+  orientationMessage.textContent = getI18nText(
+    'rotateDevice',
+    speech.getLanguage(),
+  );
+};
+
+updateOrientationText();
 
 orientationPicture.append(tabletShape, rotateArrow);
 orientationOverlay.append(orientationPicture, orientationMessage);
@@ -90,6 +100,8 @@ const unlockAudio = (): void => {
   sfx.unlock();
   speech.unlock();
 };
+
+document.addEventListener('settingschanged', updateOrientationText);
 
 const preventGesture = (event: Event): void => {
   event.preventDefault();
