@@ -151,6 +151,8 @@ export class ActivityRouter {
       button.type = 'button';
       button.className = `menu-button menu-button--${activity.id}`;
       button.setAttribute('aria-label', label);
+      // Stagger entrance: each card arrives slightly later than the previous.
+      button.style.animationDelay = `${menu.children.length * 60}ms`;
 
       const iconWrap = document.createElement('div');
       iconWrap.className = 'menu-button__icon-wrap';
@@ -166,6 +168,18 @@ export class ActivityRouter {
       badge.textContent = label;
 
       button.append(iconWrap, badge);
+
+      // iOS: :active can be unreliable with touch-action:none. Use pointerdown.
+      const pressStart = (): void => {
+        button.classList.add('is-pressed');
+      };
+      const pressEnd = (): void => {
+        button.classList.remove('is-pressed');
+      };
+      button.addEventListener('pointerdown', pressStart);
+      button.addEventListener('pointerup', pressEnd);
+      button.addEventListener('pointercancel', pressEnd);
+      button.addEventListener('pointerleave', pressEnd);
 
       button.addEventListener('click', () => {
         this.sfx.play('pop');
