@@ -27,6 +27,11 @@ export const I18N_STRINGS = {
     th: 'จบแล้ว',
     en: 'All done',
   },
+  playAgain: {
+    ja: 'また あそぶ',
+    th: 'เล่นอีกครั้ง',
+    en: 'Play again',
+  },
 
   // アクティビティ名
   activitySignal: {

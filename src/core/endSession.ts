@@ -1,6 +1,7 @@
 import type { EndTimerMinutes } from './settings';
 
 const DEFAULT_COMPLETION_DELAY_MS = 1_200;
+const GRACE_PERIOD_MS = 15_000;
 
 export interface EndSessionControllerOptions {
   onEnd(): void;
@@ -10,6 +11,7 @@ export interface EndSessionControllerOptions {
 export class EndSessionController {
   private readonly onEnd: () => void;
   private readonly completionDelayMs: number;
+  private graceTimerId: number | null = null;
   private expiryTimerId: number | null = null;
   private endingTimerId: number | null = null;
   private deadlineMs: number | null = null;
@@ -38,6 +40,12 @@ export class EndSessionController {
       this.expiryTimerId = null;
       this.deadlineMs = null;
       this.expired = true;
+
+      // Bounded grace period; if no task completes within it, end the session.
+      this.graceTimerId = window.setTimeout(() => {
+        this.graceTimerId = null;
+        this.notifyTaskComplete();
+      }, GRACE_PERIOD_MS);
     }, durationMs);
   }
 
@@ -53,6 +61,11 @@ export class EndSessionController {
 
     if (!this.expired || this.ended || this.endingTimerId !== null) {
       return;
+    }
+
+    if (this.graceTimerId !== null) {
+      window.clearTimeout(this.graceTimerId);
+      this.graceTimerId = null;
     }
 
     this.endingTimerId = window.setTimeout(() => {
@@ -75,6 +88,11 @@ export class EndSessionController {
     if (this.expiryTimerId !== null) {
       window.clearTimeout(this.expiryTimerId);
       this.expiryTimerId = null;
+    }
+
+    if (this.graceTimerId !== null) {
+      window.clearTimeout(this.graceTimerId);
+      this.graceTimerId = null;
     }
 
     if (this.endingTimerId !== null) {

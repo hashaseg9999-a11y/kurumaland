@@ -249,6 +249,16 @@ export class ActivityRouter {
     endingTitle.textContent = getI18nText('endingMessage', currentLang);
     screen.append(endingTitle);
 
+    const playAgainButton = document.createElement('button');
+    playAgainButton.type = 'button';
+    playAgainButton.className = 'ending-play-again';
+    playAgainButton.textContent = getI18nText('playAgain', currentLang);
+    playAgainButton.addEventListener('click', () => {
+      this.sfx.play('pop');
+      this.showMenu();
+    });
+    screen.append(playAgainButton);
+
     this.root.append(screen);
     playSceneTransition(screen, 'enter');
     this.speech.speak('wellDone');
@@ -256,6 +266,7 @@ export class ActivityRouter {
   };
 
   private openActivity(activity: Activity): void {
+    const currentLang: Lang = this.speech.getLanguage();
     this.unmountCurrentActivity();
     this.ending = false;
     this.clearScreenEffects();
@@ -286,20 +297,29 @@ export class ActivityRouter {
 
     stage.classList.add('activity-stage');
 
-    activity.mount({
-      root: stage,
-      speech: this.speech,
-      sfx: this.sfx,
-      settings: this.getSettings(),
-      exitToMenu: () => {
-        this.showMenu();
-      },
-      notifyTaskComplete: () => {
-        this.onTaskComplete();
-      },
-    });
-
-    this.currentActivity = activity;
+    try {
+      activity.mount({
+        root: stage,
+        speech: this.speech,
+        sfx: this.sfx,
+        settings: this.getSettings(),
+        exitToMenu: () => {
+          this.showMenu();
+        },
+        notifyTaskComplete: () => {
+          this.onTaskComplete();
+        },
+      });
+      this.currentActivity = activity;
+    } catch (error) {
+      console.error('[KurumaLand] Activity mount failed:', error);
+      const fallbackMessage = document.createElement('p');
+      fallbackMessage.className = 'activity-fallback';
+      fallbackMessage.setAttribute('role', 'alert');
+      fallbackMessage.textContent = getI18nText('backToMenu', currentLang);
+      stage.append(fallbackMessage);
+      window.setTimeout(() => this.showMenu(), 2_000);
+    }
   }
 
   private clearScreenEffects(): void {

@@ -1,6 +1,13 @@
 :root {
-  color: #15334a;
+  --ink: #15334a;
+  --ink-soft: #4a6b85;
+  --paper: #ffffff;
+  --accent: #0077b6;
+  --accent-deep: #01579b;
+  --warm-accent: #e65100;
+  --card-border: #d0e7f5;
   background: #d4f0ff;
+  color: var(--ink);
   font-family:
     "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Leelawadee UI", "Sarabun", "Thonburi", "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -40,6 +47,56 @@ button {
 button:focus-visible {
   outline: 5px solid #ff9f1c;
   outline-offset: 4px;
+}
+
+/* Ending screen: play again button */
+.ending-play-again {
+  position: absolute;
+  bottom: max(28px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  min-width: 220px;
+  min-height: 88px;
+  padding: 14px 40px;
+  border: 4px solid #ffffff;
+  border-radius: 32px;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f7fc 100%);
+  box-shadow:
+    0 8px 0 #b0bec5,
+    0 12px 24px rgb(21 51 74 / 16%);
+  color: var(--ink, #15334a);
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.ending-play-again:hover {
+  transform: translateX(-50%) translateY(-2px) scale(1.04);
+}
+
+.ending-play-again:active {
+  transform: translateX(-50%) translateY(5px) scale(0.96);
+  box-shadow:
+    0 2px 0 #b0bec5,
+    0 6px 12px rgb(21 51 74 / 12%);
+}
+
+/* Activity mount failure fallback message */
+.activity-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 24px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--ink, #15334a);
+  font-size: clamp(18px, 2.6vw, 26px);
+  font-weight: 700;
+  text-align: center;
 }
 
 img {
@@ -94,7 +151,6 @@ img {
   from {
     opacity: 0;
     transform:
-      perspective(900px)
       translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 190px)
       rotateX(7.5deg)
       scale(0.94);
@@ -103,7 +159,6 @@ img {
   to {
     opacity: 1;
     transform:
-      perspective(900px)
       translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 0px)
       rotateX(calc(var(--scene-tilt-x, 0) * 1deg))
       rotateY(calc(var(--scene-tilt-y, 0) * 1deg));
@@ -114,7 +169,6 @@ img {
   from {
     opacity: 1;
     transform:
-      perspective(900px)
       translate3d(calc(var(--parallax-x, 0) * -10px), calc(var(--parallax-y, 0) * -8px), 0px)
       rotateX(calc(var(--scene-tilt-x, 0) * 1deg))
       rotateY(calc(var(--scene-tilt-y, 0) * 1deg));
@@ -123,7 +177,6 @@ img {
   to {
     opacity: 0;
     transform:
-      perspective(900px)
       translate3d(calc(var(--parallax-x, 0) * -14px), calc(var(--parallax-y, 0) * -10px), 170px)
       rotateX(6deg)
       scale(0.96);
@@ -252,17 +305,16 @@ img {
   z-index: 10;
   margin: 0;
   padding: 8px 32px;
-  border: 4px solid #ffffff;
+  border: 3px solid var(--card-border);
   border-radius: 32px;
-  background: linear-gradient(135deg, #ff5252 0%, #ff7a00 100%);
+  background: var(--paper);
   box-shadow:
-    0 8px 0 #d32f2f,
-    0 12px 24px rgba(21, 51, 74, 0.2);
-  color: #ffffff;
+    0 6px 0 var(--card-border),
+    0 10px 22px rgb(21 51 74 / 14%);
+  color: var(--ink);
   font-size: clamp(20px, 3.2vw, 30px);
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 2px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -291,6 +343,7 @@ img {
 }
 
 .menu-lang-btn {
+  min-height: 48px;
   padding: 6px 14px;
   border: 2px solid transparent;
   border-radius: 18px;
@@ -446,7 +499,7 @@ img {
 .menu-button--signal {
   --card-bg: linear-gradient(160deg, #fff8e1 0%, #ffe082 100%);
   --card-shadow: #f57f17;
-  --badge-bg: #ff8f00;
+  --badge-bg: #e65100;
 }
 
 .menu-button--color-garage {
@@ -577,8 +630,8 @@ img {
   position: fixed;
   z-index: 20;
   display: grid;
-  width: 76px;
-  height: 76px;
+  width: 88px;
+  height: 88px;
   place-items: center;
   border: 4px solid #ffffff;
   border-radius: 24px;
@@ -977,6 +1030,20 @@ img {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .scene3d-cloud,
+  .scene3d-road-lane,
+  .car-fire,
+  .car-police,
+  .scene3d-stage.is-entering,
+  .scene3d-stage.is-exiting {
+    animation: none !important;
+  }
+
+  .scene3d-stage {
+    transform: none;
+    opacity: 1;
+  }
+
   .ending-returning-car {
     display: none;
   }
