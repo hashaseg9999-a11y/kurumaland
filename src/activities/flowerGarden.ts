@@ -110,7 +110,50 @@ class FlowerGardenActivity implements Activity {
         width: 70%;
         aspect-ratio: 1;
         border-radius: 50%;
+        display: grid;
+        place-items: center;
       }
+      .flower-garden-activity__face {
+        position: relative;
+        width: 34%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(circle at 36% 30%, #ffe082, #ffb300);
+        box-shadow:
+          inset 0 -3px 5px rgb(141 78 0 / 20%),
+          0 3px 7px rgb(51 105 30 / 18%);
+      }
+      .flower-garden-activity__eye {
+        position: absolute;
+        top: 32%;
+        width: 15%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: #4e342e;
+      }
+      .flower-garden-activity__eye--left { left: 25%; }
+      .flower-garden-activity__eye--right { right: 25%; }
+      .flower-garden-activity__mouth {
+        position: absolute;
+        left: 50%;
+        bottom: 22%;
+        width: 38%;
+        height: 22%;
+        transform: translateX(-50%);
+        border-bottom-left-radius: 100px;
+        border-bottom-right-radius: 100px;
+        background: #4e342e;
+      }
+      .flower-garden-activity__cheek {
+        position: absolute;
+        top: 52%;
+        width: 16%;
+        height: 10%;
+        border-radius: 50%;
+        background: rgb(255 122 144 / 65%);
+      }
+      .flower-garden-activity__cheek--left { left: 10%; }
+      .flower-garden-activity__cheek--right { right: 10%; }
       .flower-garden-activity__seed {
         position: absolute;
         left: 48%;
@@ -203,7 +246,7 @@ class FlowerGardenActivity implements Activity {
     }
 
     const isDandelion = this.tapCount > 0 && (this.tapCount + 1) % 5 === 0;
-    const size = isDandelion ? 72 : 62 + Math.random() * 30;
+    const size = isDandelion ? 104 : 104 + Math.random() * 38;
     const bloomTop = y - size / 2;
     const hue = Math.floor(Math.random() * 360 / 40) * 40;
     const el = document.createElement('div');
@@ -249,12 +292,44 @@ class FlowerGardenActivity implements Activity {
         position: 'absolute',
         left: '50%',
         top: '50%',
-        width: '32%',
-        height: '32%',
+        width: '40%',
+        height: '40%',
         borderRadius: '50%',
         background: '#FFD54F',
         transform: 'translate(-50%, -50%)',
       });
+      center.className = 'flower-garden-activity__face';
+      const faceMood = this.tapCount % 3;
+      for (const side of ['left', 'right'] as const) {
+        const eye = document.createElement('span');
+        eye.className = `flower-garden-activity__eye flower-garden-activity__eye--${side}`;
+        if (faceMood === 1 && side === 'left') {
+          eye.style.borderRadius = '50% 50% 0 0';
+          eye.style.height = '9%';
+          eye.style.top = '35%';
+        }
+        center.append(eye);
+      }
+      const mouth = document.createElement('span');
+      mouth.className = 'flower-garden-activity__mouth';
+      if (faceMood === 1) {
+        mouth.style.borderBottomLeftRadius = '8px';
+        mouth.style.borderBottomRightRadius = '8px';
+        mouth.style.borderTopLeftRadius = '100px';
+        mouth.style.borderTopRightRadius = '100px';
+        mouth.style.bottom = '28%';
+      } else if (faceMood === 2) {
+        mouth.style.width = '24%';
+        mouth.style.height = '24%';
+        mouth.style.bottom = '26%';
+        mouth.style.borderRadius = '50%';
+      }
+      center.append(mouth);
+      for (const side of ['left', 'right'] as const) {
+        const cheek = document.createElement('span');
+        cheek.className = `flower-garden-activity__cheek flower-garden-activity__cheek--${side}`;
+        center.append(cheek);
+      }
       const stem = document.createElement('div');
       stem.className = 'flower-garden-activity__stem';
       const leaf = document.createElement('div');

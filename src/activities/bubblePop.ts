@@ -46,7 +46,7 @@ class BubblePopActivity implements Activity {
         position: absolute;
         inset: 0;
         overflow: hidden;
-        background: linear-gradient(180deg, #E1F5FE 0%, #B3E5FC 55%, #81D4FA 100%);
+        background: linear-gradient(180deg, #0288d1 0%, #01579b 55%, #013a63 100%);
         touch-action: none;
       }
       .bubble-pop-activity__hint {
@@ -71,6 +71,7 @@ class BubblePopActivity implements Activity {
         border-radius: 50%;
         cursor: pointer;
         will-change: transform;
+        filter: drop-shadow(0 4px 10px rgb(0 20 40 / 35%));
         z-index: 2;
       }
     `;
@@ -117,13 +118,14 @@ class BubblePopActivity implements Activity {
     const size = 80 + Math.random() * 36;
     const huePick = Math.random();
     const grad = huePick < 0.5
-      ? `radial-gradient(circle at 32% 28%, rgb(255 255 255 / 92%), rgb(129 212 250 / 50%) 55%, rgb(79 195 247 / 18%) 100%)`
-      : `radial-gradient(circle at 32% 28%, rgb(255 255 255 / 88%), rgb(206 147 216 / 42%) 55%, rgb(186 104 200 / 14%) 100%)`;
+      ? `radial-gradient(circle at 32% 28%, rgb(255 255 255 / 98%), rgb(129 212 250 / 72%) 55%, rgb(225 245 254 / 42%) 100%)`
+      : `radial-gradient(circle at 32% 28%, rgb(255 255 255 / 96%), rgb(206 147 216 / 70%) 55%, rgb(243 229 245 / 38%) 100%)`;
     el.style.width = size + 'px';
     el.style.height = size + 'px';
     el.style.background = grad;
-    el.style.border = '2.5px solid rgb(255 255 255 / 70%)';
-    el.style.boxShadow = 'inset -3px -3px 8px rgb(255 255 255 / 45%), 0 3px 8px rgb(1 87 155 / 12%)';
+    el.style.border = '3px solid rgb(255 255 255 / 96%)';
+    el.style.boxShadow =
+      'inset -4px -4px 10px rgb(255 255 255 / 65%), inset 3px 3px 7px rgb(255 255 255 / 45%), 0 0 14px rgb(255 255 255 / 30%)';
     this.stage.append(el);
 
     this.bubbles.push({
