@@ -3,9 +3,9 @@ import type { Lang } from './speech';
 export const I18N_STRINGS = {
   // アプリ全般・メニュー
   appTitle: {
-    ja: 'くるまランド',
-    th: 'สวนสนุกรถยนต์',
-    en: 'KurumaLand',
+    ja: 'しゅんいちランド',
+    th: 'สวนสนุกชูนิจิ',
+    en: 'ShunichiLand',
   },
   chooseActivity: {
     ja: 'あそびを えらぶ',
