@@ -7,6 +7,16 @@ export const I18N_STRINGS = {
     th: 'สวนสนุกชูนิจิ',
     en: 'ShunichiLand',
   },
+  activityThreeWorld: {
+    ja: '3Dワールド',
+    th: 'โลกสามมิติ',
+    en: '3D World',
+  },
+  webglUnavailable: {
+    ja: '3Dをひらけません。もどるボタンをおしてください。',
+    th: 'เปิด 3D ไม่ได้',
+    en: '3D is unavailable. Please go back.',
+  },
   chooseActivity: {
     ja: 'あそびを えらぶ',
     th: 'เลือกกิจกรรม',

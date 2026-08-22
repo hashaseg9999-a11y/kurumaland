@@ -22,6 +22,7 @@ const ACTIVITY_I18N_KEYS: Readonly<Record<string, I18nKey>> = {
   'ball-pool': 'activityBallPool',
   'bubble-pop': 'activityBubblePop',
   'flower-garden': 'activityFlowerGarden',
+  'three-world': 'activityThreeWorld',
 };
 
 interface ActivityRouterOptions {

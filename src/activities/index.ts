@@ -1,4 +1,5 @@
 import type { Activity } from '../core/activity';
+import { ThreeWorldActivity } from '../three/threeWorldActivity';
 import { bigSmallActivity } from './bigSmall';
 import { ballPoolActivity } from './ballPool';
 import { bubblePopActivity } from './bubblePop';
@@ -23,4 +24,5 @@ export const activities: readonly Activity[] = [
   ballPoolActivity,
   bubblePopActivity,
   flowerGardenActivity,
+  new ThreeWorldActivity(),
 ];

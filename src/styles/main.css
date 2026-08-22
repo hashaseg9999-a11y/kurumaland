@@ -1,4 +1,5 @@
 :root {
+  /* Three.js activity styles are imported from src/three/threeWorldActivity.css */
   --ink: #15334a;
   --ink-soft: #4a6b85;
   --paper: #ffffff;
