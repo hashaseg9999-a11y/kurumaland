@@ -170,7 +170,12 @@ class FlowerGardenActivity implements Activity {
     const localX = event.clientX - bounds.left;
     const localY = event.clientY - bounds.top;
     const dandelion = this.blooms.find((bloom) => {
-      return bloom.isDandelion && Math.hypot(event.clientX - bloom.x, event.clientY - bloom.y) < bloom.size * 0.75;
+      if (!bloom.isDandelion) return false;
+      // Use the bloom element's bounding rect center (covers head area)
+      const rect = bloom.el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height * 0.35;
+      return Math.hypot(event.clientX - cx, event.clientY - cy) < Math.max(rect.width / 2 + 16, 44);
     });
     if (dandelion) {
       this.blowDandelion(dandelion, event.clientX, event.clientY);

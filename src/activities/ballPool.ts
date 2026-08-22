@@ -14,7 +14,7 @@ interface Ball {
   hue: number;
 }
 
-const BALL_COUNT = 14;
+const BALL_COUNT = 10;
 const GRAVITY = 0.35;
 const WALL_BOUNCE = 0.72;
 const BALL_BOUNCE = 0.88;
@@ -107,7 +107,7 @@ class BallPoolActivity implements Activity {
       ballEl.className = 'ball-pool-activity__ball';
       ballEl.setAttribute('aria-hidden', 'true');
 
-      const size = 44 + Math.random() * 40;
+      const size = 80 + Math.random() * 30;
       const hue = (i * 360) / BALL_COUNT + Math.random() * 30;
       ballEl.style.width = size + 'px';
       ballEl.style.height = size + 'px';
@@ -144,7 +144,7 @@ class BallPoolActivity implements Activity {
     for (const b of this.balls) {
       const dx = event.clientX - b.x;
       const dy = event.clientY - b.y;
-      if (Math.hypot(dx, dy) < b.r + 30) {
+      if (Math.hypot(dx, dy) < Math.max(b.r, 44)) {
         hitAny = true;
         // Launch upward from tap point
         const angle = Math.atan2(dy, dx);

@@ -5,7 +5,7 @@ import carRed from '../assets/car_red.svg';
 import garageBlue from '../assets/garage_blue.svg';
 import type { Activity } from './activity';
 import { getI18nText, type I18nKey } from './i18n';
-import { saveSettings, type Settings } from './settings';
+import type { Settings } from './settings';
 import { attachParallax, createSceneStage, playSceneTransition } from './scene3d';
 import type { SfxService } from './sfx';
 import type { Lang, SpeechService } from './speech';
@@ -41,8 +41,8 @@ export class ActivityRouter {
   private readonly sfx: SfxService;
   private readonly getSettings: () => Settings;
   private readonly onTaskComplete: () => void;
-  private readonly onSettingsChange?: (settings: Readonly<Settings>) => void;
   private currentActivity: Activity | null = null;
+  private transitioning = false;
   private menuEffectsCleanup: (() => void) | null = null;
   private activityEffectsCleanup: (() => void) | null = null;
   private ending = false;
@@ -53,7 +53,6 @@ export class ActivityRouter {
     this.speech = options.speech;
     this.sfx = options.sfx;
     this.getSettings = options.getSettings;
-    this.onSettingsChange = options.onSettingsChange;
     this.onTaskComplete = options.onTaskComplete;
   }
 
@@ -66,6 +65,8 @@ export class ActivityRouter {
   }
 
   showMenu = (): void => {
+    if (this.transitioning) return;
+    this.transitioning = true;
     this.unmountCurrentActivity();
     this.ending = false;
     this.clearScreenEffects();
@@ -81,65 +82,14 @@ export class ActivityRouter {
       strength: 10,
     });
 
-    const currentLang: Lang = this.speech.getLanguage();
     playSceneTransition(stage, 'enter');
 
-    // Language Quick Switcher Bar
-    const langBar = document.createElement('div');
-    langBar.className = 'menu-lang-bar';
-    const langOptions: Array<{ code: Lang; label: string }> = [
-      { code: 'ja', label: '🇯🇵 JP' },
-      { code: 'th', label: '🇹🇭 TH' },
-      { code: 'en', label: '🇺🇸 EN' },
-    ];
-
-    for (const opt of langOptions) {
-      const langBtn = document.createElement('button');
-      langBtn.type = 'button';
-      langBtn.className = `menu-lang-btn ${currentLang === opt.code ? 'is-active' : ''}`;
-      langBtn.textContent = opt.label;
-      langBtn.setAttribute('aria-label', opt.label);
-      langBtn.addEventListener('click', () => {
-        this.sfx.play('pop');
-        const nextSettings = { ...this.getSettings(), langMode: opt.code };
-        saveSettings(nextSettings);
-        this.onSettingsChange?.(nextSettings);
-        document.dispatchEvent(new CustomEvent('settingschanged'));
-        this.showMenu();
-      });
-      langBar.append(langBtn);
-    }
-    stage.append(langBar);
-
     // Header Title
+    const currentLang: Lang = this.speech.getLanguage();
     const title = document.createElement('h1');
     title.className = 'menu-title';
     title.textContent = getI18nText('appTitle', currentLang);
     stage.append(title);
-
-    // Landscape & Animated Drive Track at Bottom
-    const landscape = document.createElement('div');
-    landscape.className = 'menu-landscape';
-
-    const hills = document.createElement('div');
-    hills.className = 'menu-hills';
-
-    const road = document.createElement('div');
-    road.className = 'menu-road';
-
-    const drivingCar1 = document.createElement('img');
-    drivingCar1.className = 'menu-driving-car car-fire';
-    drivingCar1.src = carRed;
-    drivingCar1.alt = '';
-
-    const drivingCar2 = document.createElement('img');
-    drivingCar2.className = 'menu-driving-car car-police';
-    drivingCar2.src = carBlue;
-    drivingCar2.alt = '';
-
-    road.append(drivingCar1, drivingCar2);
-    landscape.append(hills, road);
-    stage.append(landscape);
 
     // Main 3D Card Grid
     const menu = document.createElement('nav');
@@ -179,13 +129,15 @@ export class ActivityRouter {
       const pressEnd = (): void => {
         button.classList.remove('is-pressed');
       };
-      button.addEventListener('pointerdown', pressStart);
+      button.addEventListener('pointerdown', () => {
+        pressStart();
+        this.sfx.play('pop');
+      });
       button.addEventListener('pointerup', pressEnd);
       button.addEventListener('pointercancel', pressEnd);
       button.addEventListener('pointerleave', pressEnd);
 
       button.addEventListener('click', () => {
-        this.sfx.play('pop');
         this.openActivity(activity);
       });
 
@@ -193,6 +145,7 @@ export class ActivityRouter {
     }
 
     stage.append(menu);
+    this.transitioning = false;
   };
 
   destroy(): void {
@@ -305,8 +258,14 @@ export class ActivityRouter {
     homeButton.setAttribute('aria-label', 'ホームにもどる');
     homeButton.textContent = '🏠';
 
-    homeButton.addEventListener('click', () => {
+    homeButton.addEventListener('pointerdown', () => {
       this.sfx.play('pop');
+      homeButton.classList.add('is-pressed');
+    });
+    homeButton.addEventListener('pointerup', () => homeButton.classList.remove('is-pressed'));
+    homeButton.addEventListener('pointercancel', () => homeButton.classList.remove('is-pressed'));
+
+    homeButton.addEventListener('click', () => {
       this.showMenu();
     });
 

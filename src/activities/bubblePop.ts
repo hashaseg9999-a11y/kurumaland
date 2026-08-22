@@ -14,8 +14,8 @@ interface Bubble {
   popped: boolean;
 }
 
-const MAX_BUBBLES = 10;
-const SPAWN_INTERVAL_MS = 700;
+const MAX_BUBBLES = 7;
+const SPAWN_INTERVAL_MS = 1100;
 
 class BubblePopActivity implements Activity {
   readonly id = 'bubble-pop';
@@ -114,7 +114,7 @@ class BubblePopActivity implements Activity {
     el.className = 'bubble-pop-activity__bubble';
     el.setAttribute('aria-hidden', 'true');
 
-    const size = 36 + Math.random() * 44;
+    const size = 80 + Math.random() * 36;
     const huePick = Math.random();
     const grad = huePick < 0.5
       ? `radial-gradient(circle at 32% 28%, rgb(255 255 255 / 92%), rgb(129 212 250 / 50%) 55%, rgb(79 195 247 / 18%) 100%)`
@@ -147,7 +147,7 @@ class BubblePopActivity implements Activity {
       if (b.popped) continue;
       const dx = event.clientX - b.x;
       const dy = event.clientY - b.y;
-      if (Math.hypot(dx, dy) < b.size / 2 + 20) {
+      if (Math.hypot(dx, dy) < Math.max(b.size / 2, 40)) {
         b.popped = true;
         poppedAny = true;
         // Pop animation: quick scale up then remove
