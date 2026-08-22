@@ -19,6 +19,9 @@ const ACTIVITY_I18N_KEYS: Readonly<Record<string, I18nKey>> = {
   puzzle: 'activityPuzzle',
   'lights-sound': 'activityLightsSound',
   'line-up': 'activityLineUp',
+  'ball-pool': 'activityBallPool',
+  'bubble-pop': 'activityBubblePop',
+  'flower-garden': 'activityFlowerGarden',
 };
 
 interface ActivityRouterOptions {

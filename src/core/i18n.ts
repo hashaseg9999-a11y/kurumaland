@@ -74,6 +74,21 @@ export const I18N_STRINGS = {
     th: 'ขบวนรถไฟยาว',
     en: 'Train Line-up',
   },
+  activityBallPool: {
+    ja: 'ぼーるぷーる',
+    th: 'สระลูกบอล',
+    en: 'Ball Pool',
+  },
+  activityBubblePop: {
+    ja: 'あわあわ ぱちぱち',
+    th: 'ฟองสบู่ป๊อป',
+    en: 'Bubble Pop',
+  },
+  activityFlowerGarden: {
+    ja: 'おはなばたけ',
+    th: 'สวนดอกไม้',
+    en: 'Flower Garden',
+  },
 
   // A1: 信号 (Signal)
   signalHintInit: {
@@ -234,6 +249,23 @@ export const I18N_STRINGS = {
     ja: 'しゅっぱつ しんこうー！ ぽっぽー！',
     th: 'ออกเดินทางได้! ปู้นๆ!',
     en: 'All aboard! Choo choo!',
+  },
+
+  // A9-A11: 感覚あそび
+  ballPoolHint: {
+    ja: 'ボールを タップして はじこう！',
+    th: 'แตะลูกบอลให้เด้ง!',
+    en: 'Tap the balls to bounce!',
+  },
+  bubblePopHint: {
+    ja: 'あわを つついて ぱちんと はじこう！',
+    th: 'จับฟองสบู่ให้แตก!',
+    en: 'Pop the bubbles!',
+  },
+  flowerGardenHint: {
+    ja: 'おはなを さいて あそぼう！',
+    th: 'ปลูกดอกไม้เล่นกัน!',
+    en: 'Make flowers bloom!',
   },
   // 保護者設定 (Parental Gate & Settings)
   parentalSettingsTitle: {
