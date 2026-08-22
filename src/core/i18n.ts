@@ -3,9 +3,19 @@ import type { Lang } from './speech';
 export const I18N_STRINGS = {
   // アプリ全般・メニュー
   appTitle: {
-    ja: '✨ くるまランド ✨',
-    th: '✨ สวนสนุกรถยนต์ ✨',
-    en: '✨ KurumaLand ✨',
+    ja: 'しゅんいちランド',
+    th: 'สวนสนุกชูนิจิ',
+    en: 'ShunichiLand',
+  },
+  activityThreeWorld: {
+    ja: '3Dワールド',
+    th: 'โลกสามมิติ',
+    en: '3D World',
+  },
+  webglUnavailable: {
+    ja: '3Dをひらけません。もどるボタンをおしてください。',
+    th: 'เปิด 3D ไม่ได้',
+    en: '3D is unavailable. Please go back.',
   },
   chooseActivity: {
     ja: 'あそびを えらぶ',
@@ -21,6 +31,16 @@ export const I18N_STRINGS = {
     ja: 'よこにしてね',
     th: 'หมุนเป็นแนวนอนนะ',
     en: 'Please rotate sideways',
+  },
+  endingMessage: {
+    ja: 'おしまい',
+    th: 'จบแล้ว',
+    en: 'All done',
+  },
+  playAgain: {
+    ja: 'また あそぶ',
+    th: 'เล่นอีกครั้ง',
+    en: 'Play again',
   },
 
   // アクティビティ名
@@ -63,6 +83,21 @@ export const I18N_STRINGS = {
     ja: 'ならべて れっしゃ',
     th: 'ขบวนรถไฟยาว',
     en: 'Train Line-up',
+  },
+  activityBallPool: {
+    ja: 'ぼーるぷーる',
+    th: 'สระลูกบอล',
+    en: 'Ball Pool',
+  },
+  activityBubblePop: {
+    ja: 'あわあわ ぱちぱち',
+    th: 'ฟองสบู่ป๊อป',
+    en: 'Bubble Pop',
+  },
+  activityFlowerGarden: {
+    ja: 'おはなばたけ',
+    th: 'สวนดอกไม้',
+    en: 'Flower Garden',
   },
 
   // A1: 信号 (Signal)
@@ -224,6 +259,23 @@ export const I18N_STRINGS = {
     ja: 'しゅっぱつ しんこうー！ ぽっぽー！',
     th: 'ออกเดินทางได้! ปู้นๆ!',
     en: 'All aboard! Choo choo!',
+  },
+
+  // A9-A11: 感覚あそび
+  ballPoolHint: {
+    ja: 'ボールを タップして はじこう！',
+    th: 'แตะลูกบอลให้เด้ง!',
+    en: 'Tap the balls to bounce!',
+  },
+  bubblePopHint: {
+    ja: 'あわを つついて ぱちんと はじこう！',
+    th: 'จับฟองสบู่ให้แตก!',
+    en: 'Pop the bubbles!',
+  },
+  flowerGardenHint: {
+    ja: 'おはなを さいて あそぼう！',
+    th: 'ปลูกดอกไม้เล่นกัน!',
+    en: 'Make flowers bloom!',
   },
   // 保護者設定 (Parental Gate & Settings)
   parentalSettingsTitle: {

@@ -83,6 +83,13 @@ export const VOCAB = {
   nightExplore: { ja: 'よるの まちを たんけんだ！', en: 'explore the night city!', th: 'สำรวจเมืองยามค่ำคืน!' },
   foundAnimal: { ja: 'みつけた！', en: 'found it!', th: 'เจอแล้ว!' },
 
+  // 感覚あそび（ボール・泡泡・花）
+  bounceBall: { ja: 'ぼーん！ たのしいね！', en: 'boing! so fun!', th: 'เด้ง! สนุกจัง!' },
+  bubblePop: { ja: 'ぱちん！ あわが はじけた！', en: 'pop! bubble burst!', th: 'ปอด! ฟองแตกแล้ว!' },
+  flower: { ja: 'はなだよ', en: 'a flower!', th: 'ดอกไม้นะ' },
+  bloom: { ja: 'さいた！ きれいね！', en: 'it bloomed! pretty!', th: 'บานแล้ว! สวยจัง!' },
+  dandelion: { ja: 'たんぽぽの わたげだよ', en: 'a dandelion puff!', th: 'เมล็ดแดนดิไลออน!' },
+
   // 数・連結トレイン（A8）
   count1: { ja: 'いち！', en: 'one!', th: 'หนึ่ง!' },
   count2: { ja: 'に！', en: 'two!', th: 'สอง!' },
