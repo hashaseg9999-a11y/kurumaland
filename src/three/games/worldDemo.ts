@@ -1,6 +1,7 @@
 import { createCar } from '../cars';
 import type { GameContext, GameModule } from '../contracts';
 import type * as THREE from 'three';
+import { removeAndDispose } from '../objectCleanup';
 
 export class WorldDemoGame implements GameModule {
   readonly id = 'world-demo';
@@ -17,7 +18,7 @@ export class WorldDemoGame implements GameModule {
   unmount(): void {
     for (const off of this.cleanup) off();
     this.cleanup = [];
-    this.car?.removeFromParent();
+    if (this.car) removeAndDispose(this.car);
   }
 
   private update(delta: number, elapsed: number): void {

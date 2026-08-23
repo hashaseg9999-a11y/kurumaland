@@ -1,7 +1,14 @@
 import type * as THREE from 'three';
 
 export type CarColorName = 'red' | 'blue' | 'yellow' | 'green';
-export type GameSfxName = 'chime' | 'pop' | 'horn' | 'sparkle';
+export type EmergencyVehicleType = 'fire-truck' | 'ambulance' | 'police-car';
+export type GameSfxName =
+  | 'chime'
+  | 'pop'
+  | 'horn'
+  | 'sparkle'
+  | 'siren'
+  | 'policeSiren';
 
 export interface GameContext {
   world: World3D;

@@ -4,7 +4,6 @@ import { ColorGarageGame } from './colorGarageGame';
 import { BigSmallGame } from './bigSmallGame';
 import { PoolGame } from './poolGame';
 import { LineUpGame } from './lineUpGame';
-import { WorldDemoGame } from './worldDemo';
 
 export const threeGames: readonly GameModule[] = [
   new SignalGame(),
@@ -12,5 +11,4 @@ export const threeGames: readonly GameModule[] = [
   new BigSmallGame(),
   new PoolGame(),
   new LineUpGame(),
-  new WorldDemoGame(),
 ];

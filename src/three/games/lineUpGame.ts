@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type GameContext, type GameModule } from '../contracts';
+import { removeAndDispose } from '../objectCleanup';
 
 type TrainColor = 'red' | 'blue' | 'green';
 const COLORS: readonly TrainColor[] = ['red', 'blue', 'green'];
@@ -39,8 +40,8 @@ export class LineUpGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
-    for (const car of this.cars) car.group.removeFromParent();
-    this.locomotive?.removeFromParent();
+    for (const car of this.cars) removeAndDispose(car.group);
+    if (this.locomotive) removeAndDispose(this.locomotive);
     this.cars = [];
     this.cleanup = [];
     this.context = null;

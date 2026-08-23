@@ -4,6 +4,7 @@ import {
   BackSide,
   BoxGeometry,
   Color,
+  CylinderGeometry,
   DirectionalLight,
   Fog,
   Group,
@@ -14,6 +15,7 @@ import {
   PlaneGeometry,
   Raycaster,
   Scene,
+  SphereGeometry,
   Vector2,
   WebGLRenderer,
 } from 'three';
@@ -38,6 +40,7 @@ export class ThreeWorld implements World3D {
   private readonly frameHandlers = new Set<FrameHandler>();
   private readonly pointerHandlers = new Set<PointerRayHandler>();
   private readonly disposables: Array<{ dispose(): void }> = [];
+  private readonly roadProps = new Group();
   private animationId = 0;
   private lastTime = performance.now();
   private disposed = false;
@@ -68,6 +71,7 @@ export class ThreeWorld implements World3D {
 
     this.createSkyAndGround();
     this.createRoad();
+    this.scene.add(this.roadProps);
     this.container.append(this.canvas);
     this.resizeToContainer();
     this.canvas.addEventListener('pointerdown', this.handlePointerDown);
@@ -127,6 +131,87 @@ export class ThreeWorld implements World3D {
     ground.receiveShadow = true;
     this.scene.add(sky, ground);
     this.disposables.push(skyGeometry, skyMaterial, groundGeometry, groundMaterial);
+
+    // --- Quality upgrade: clouds, trees, buildings, road furniture ---
+    const cloudMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.9 });
+    const puffGeometry = new SphereGeometry(1, 14, 12);
+    for (let index = 0; index < 9; index++) {
+      const cloud = new Group();
+      const puffCount = 3 + Math.floor(Math.random() * 3);
+      for (let p = 0; p < puffCount; p++) {
+        const puff = new Mesh(puffGeometry, cloudMaterial);
+        const scale = 0.7 + Math.random() * 0.8;
+        puff.position.set((p - puffCount / 2) * 1.4 + Math.random() * 0.5, Math.random() * 0.45, Math.random() * 0.6);
+        puff.scale.setScalar(scale);
+        cloud.add(puff);
+      }
+      cloud.position.set(
+        -70 + Math.random() * 140,
+        22 + Math.random() * 10,
+        -80 + Math.random() * 60,
+      );
+      cloud.userData.isEnvironment = true;
+      this.scene.add(cloud);
+    }
+
+    const trunkGeometry = new CylinderGeometry(0.16, 0.24, 1.5, 8);
+    const trunkMaterial = new MeshStandardMaterial({ color: '#795548', roughness: 0.75 });
+    const leafGeometry = new SphereGeometry(0.95, 14, 12);
+    const leafMaterials = ['#43a047', '#388e3c', '#4caf50'].map(
+      (color) => new MeshStandardMaterial({ color, roughness: 0.62 }),
+    );
+    for (let index = 0; index < 34; index++) {
+      const tree = new Group();
+      const trunk = new Mesh(trunkGeometry, trunkMaterial);
+      trunk.position.y = 0.75;
+      tree.add(trunk);
+      const leaves = new Mesh(leafGeometry, leafMaterials[index % leafMaterials.length]!);
+      leaves.position.y = 2.05;
+      const leafScale = 0.85 + Math.random() * 0.6;
+      leaves.scale.set(leafScale, leafScale * 0.92, leafScale);
+      tree.add(leaves);
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const distanceFromRoad = 7.5 + Math.random() * 26;
+      tree.position.set(side * distanceFromRoad, 0, -78 + Math.random() * 156);
+      tree.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(tree);
+    }
+
+    const buildingColors = ['#eceff1', '#cfd8dc', '#ffe0b2', '#d1c4e9', '#b2dfdb'];
+    for (let index = 0; index < 18; index++) {
+      const width = 2.6 + Math.random() * 3.4;
+      const height = 4.5 + Math.random() * 9;
+      const depth = 2.6 + Math.random() * 3;
+      const geometry = new BoxGeometry(width, height, depth);
+      const material = new MeshStandardMaterial({
+        color: buildingColors[index % buildingColors.length]!,
+        roughness: 0.55,
+      });
+      const building = new Mesh(geometry, material);
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const distanceFromRoad = 17 + Math.random() * 30;
+      building.position.set(side * distanceFromRoad, height / 2, -76 + Math.random() * 152);
+      building.rotation.y = Math.random() * 0.28 - 0.14;
+      building.castShadow = false;
+      building.receiveShadow = true;
+      this.scene.add(building);
+    }
+
+    // Guard rails along the road
+    const railPostGeometry = new BoxGeometry(0.14, 0.72, 0.14);
+    const railBeamGeometry = new BoxGeometry(0.08, 0.2, 180);
+    const railMaterial = new MeshStandardMaterial({ color: '#b0bec5', metalness: 0.35, roughness: 0.42 });
+    for (const x of [-5.9, 5.9]) {
+      const beam = new Mesh(railBeamGeometry, railMaterial);
+      beam.position.set(x!, 0.66, 0);
+      this.scene.add(beam);
+      for (let z = -88; z <= 88; z += 4) {
+        const post = new Mesh(railPostGeometry, railMaterial);
+        post.position.set(x!, 0.36, z);
+        this.scene.add(post);
+      }
+    }
+    this.disposables.push(puffGeometry, cloudMaterial, trunkGeometry, trunkMaterial, leafGeometry, ...leafMaterials, railPostGeometry, railBeamGeometry, railMaterial);
   }
 
   private createRoad(): void {
@@ -146,6 +231,79 @@ export class ThreeWorld implements World3D {
     }
     this.scene.add(road, stripes);
     this.disposables.push(roadGeometry, roadMaterial, stripeGeometry, stripeMaterial);
+
+    // Road-side props: hydrants, benches, streetlights and crosswalks.
+    const hydrantGeometry = new CylinderGeometry(0.18, 0.22, 0.55, 12);
+    const hydrantCapGeometry = new SphereGeometry(0.19, 14, 14);
+    const hydrantMaterial = new MeshStandardMaterial({ color: '#ef5350', roughness: 0.35 });
+    const benchSeatGeometry = new BoxGeometry(1.5, 0.1, 0.45);
+    const benchLegGeometry = new BoxGeometry(0.1, 0.38, 0.4);
+    const benchWoodMaterial = new MeshStandardMaterial({ color: '#a1887f', roughness: 0.65 });
+    const benchMetalMaterial = new MeshStandardMaterial({ color: '#607d8b', metalness: 0.25, roughness: 0.45 });
+    const lampPostGeometry = new CylinderGeometry(0.07, 0.09, 3.8, 10);
+    const lampArmGeometry = new BoxGeometry(0.9, 0.08, 0.08);
+    const lampGeometry = new SphereGeometry(0.17, 14, 14);
+    const lampMetalMaterial = new MeshStandardMaterial({ color: '#78909c', metalness: 0.35, roughness: 0.35 });
+    const lampLightMaterial = new MeshStandardMaterial({ color: '#fff59d', emissive: '#fff176', emissiveIntensity: 0.45 });
+    for (let z = -84; z <= 84; z += 21) {
+      for (const side of [-6.6, 6.6]) {
+        const isLeft = side < 0;
+        if (Math.random() > 0.42) {
+          const hydrant = new Mesh(hydrantGeometry, hydrantMaterial);
+          hydrant.position.set(side + (isLeft ? -0.2 : 0.2), 0.28, z + (isLeft ? 2 : -3));
+          const cap = new Mesh(hydrantCapGeometry, hydrantMaterial);
+          cap.position.set(hydrant.position.x, 0.58, hydrant.position.z);
+          this.roadProps.add(hydrant, cap);
+        }
+        if (Math.random() > 0.52) {
+          const bench = new Group();
+          const seat = new Mesh(benchSeatGeometry, benchWoodMaterial);
+          seat.position.y = 0.44;
+          bench.add(seat);
+          for (const bx of [-0.62, 0.62]) {
+            const leg = new Mesh(benchLegGeometry, benchMetalMaterial);
+            leg.position.set(bx!, 0.19, 0);
+            bench.add(leg);
+          }
+          bench.position.set(side + (isLeft ? -1 : 1), 0, z + (isLeft ? 5 : -5));
+          bench.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
+          this.roadProps.add(bench);
+        }
+        const post = new Mesh(lampPostGeometry, lampMetalMaterial);
+        post.position.set(side, 1.9, z + (isLeft ? -7 : 7));
+        const arm = new Mesh(lampArmGeometry, lampMetalMaterial);
+        arm.position.set(side + (isLeft ? 0.42 : -0.42), 3.72, post.position.z);
+        const bulb = new Mesh(lampGeometry, lampLightMaterial);
+        bulb.position.set(side + (isLeft ? 0.85 : -0.85), 3.66, post.position.z);
+        this.roadProps.add(post, arm, bulb);
+      }
+    }
+    const crosswalkStripeGeometry = new PlaneGeometry(0.55, 3.2);
+    const crosswalkMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.75 });
+    for (const z of [-24, 24]) {
+      for (let x = -4.6; x <= 4.6; x += 1.15) {
+        const stripeMesh = new Mesh(crosswalkStripeGeometry, crosswalkMaterial);
+        stripeMesh.rotation.x = -Math.PI / 2;
+        stripeMesh.position.set(x!, 0.011, z);
+        this.roadProps.add(stripeMesh);
+      }
+    }
+    this.disposables.push(
+      hydrantGeometry,
+      hydrantCapGeometry,
+      hydrantMaterial,
+      benchSeatGeometry,
+      benchLegGeometry,
+      benchWoodMaterial,
+      benchMetalMaterial,
+      lampPostGeometry,
+      lampArmGeometry,
+      lampGeometry,
+      lampMetalMaterial,
+      lampLightMaterial,
+      crosswalkStripeGeometry,
+      crosswalkMaterial,
+    );
   }
 
   private applyCamera(instant: boolean): void {

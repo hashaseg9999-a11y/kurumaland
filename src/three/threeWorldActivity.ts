@@ -4,19 +4,33 @@ import { getI18nText } from '../core/i18n';
 import './threeWorldActivity.css';
 import { ThreeWorld } from './world';
 import { threeGames } from './games';
-import type { GameContext, GameModule } from './contracts';
+import type { GameContext, GameModule, GameSfxName } from './contracts';
 import type { SfxService, SfxName } from '../core/sfx';
 import type { SpeechService } from '../core/speech';
 
-type ActivitySfxName = 'chime' | 'pop' | 'horn' | 'sparkle';
-const ACTIVITY_SFX_MAP: Record<ActivitySfxName, SfxName> = { chime: 'chime', pop: 'pop', horn: 'horn', sparkle: 'sparkle' };
+type ActivitySfxName = GameSfxName;
+const ACTIVITY_SFX_MAP: Record<ActivitySfxName, SfxName> = {
+  chime: 'chime',
+  pop: 'pop',
+  horn: 'horn',
+  sparkle: 'sparkle',
+  siren: 'siren',
+  policeSiren: 'policeSiren',
+};
 const THREE_GAME_LABELS: Record<string, string> = {
   signal: 'しんごうで GO!',
   'color-garage': 'いろの しゃこ',
   'big-small': 'おおきい・ちいさい',
   'ball-pool': 'ぼーるぷーる',
   'line-up': 'ならべて れっしゃ',
-  'world-demo': '3Dワールド',
+};
+
+const THREE_GAME_INSTRUCTIONS: Record<string, string> = {
+  signal: 'しんごうを おして、あおになったら しゅっぱつ！',
+  'color-garage': 'いろと おなじ しゃこに はいろう！',
+  'big-small': 'おおきい くるまと ちいさい くるまを ならべよう！',
+  'ball-pool': 'ボールを ひっぱって うごかそう！',
+  'line-up': 'いろの せいれつに くるまをつなげよう！',
 };
 
 export class ThreeWorldActivity implements Activity {
@@ -28,6 +42,7 @@ export class ThreeWorldActivity implements Activity {
   private gameButtons: HTMLElement[] = [];
   private listeners: AbortController | null = null;
   private contextServices: { speech: SpeechService; sfx: SfxService; notifyTaskComplete(): void } | null = null;
+  private hint: HTMLElement | null = null;
 
   mount(context: ActivityContext): void {
     this.unmount();
@@ -39,7 +54,11 @@ export class ThreeWorldActivity implements Activity {
     overlay.className = 'three-world__overlay';
     const tabs = document.createElement('nav');
     tabs.className = 'three-world__tabs';
-    overlay.append(tabs);
+    const hint = document.createElement('div');
+    hint.className = 'three-world__hint';
+    hint.textContent = THREE_GAME_INSTRUCTIONS[threeGames[0]!.id] ?? 'ゲームを えらんでね';
+    this.hint = hint;
+    overlay.append(hint, tabs);
     stage.append(overlay);
     context.root.replaceChildren(stage);
     this.overlay = overlay;
@@ -70,6 +89,7 @@ export class ThreeWorldActivity implements Activity {
   unmount(): void {
     this.activeGame?.unmount();
     this.activeGame = null;
+    this.hint = null;
     this.listeners?.abort();
     this.listeners = null;
     this.gameButtons = [];
@@ -83,6 +103,9 @@ export class ThreeWorldActivity implements Activity {
     if (!this.world || !this.overlay || !this.contextServices) return;
     this.activeGame?.unmount();
     this.activeGame = null;
+    if (this.hint) {
+      this.hint.textContent = THREE_GAME_INSTRUCTIONS[game.id] ?? THREE_GAME_LABELS[game.id] ?? game.id;
+    }
     const context: GameContext = {
       world: this.world,
       overlay: this.overlay,

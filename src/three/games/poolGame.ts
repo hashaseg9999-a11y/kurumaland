@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
+import { removeAndDispose } from '../objectCleanup';
 
 interface Ball3D {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -40,7 +41,7 @@ export class PoolGame implements GameModule {
   unmount(): void {
     for (const off of this.cleanup) off();
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
-    for (const ball of this.balls) ball.mesh.removeFromParent();
+    for (const ball of this.balls) removeAndDispose(ball.mesh);
     this.balls = [];
     this.cleanup = [];
     this.context = null;

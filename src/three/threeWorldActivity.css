@@ -18,12 +18,13 @@
 .three-world__overlay {
   position: absolute;
   inset: 0;
+  z-index: 10;
   pointer-events: none;
 }
 
 .three-world__tabs {
   position: absolute;
-  top: max(12px, env(safe-area-inset-top));
+  bottom: max(14px, env(safe-area-inset-bottom));
   right: 16px;
   display: flex;
   flex-wrap: wrap;
@@ -31,6 +32,25 @@
   justify-content: flex-end;
   max-width: min(72vw, 620px);
   pointer-events: auto;
+}
+
+/* Game instruction pill */
+.three-world__hint {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border: 3px solid rgb(255 255 255 / 92%);
+  border-radius: 22px;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 5px 14px rgb(21 51 74 / 18%);
+  color: #15334a;
+  font-weight: 700;
+  font-size: clamp(15px, 2vw, 19px);
+  pointer-events: auto;
+  max-width: min(92vw, 680px);
+  text-align: center;
 }
 
 .three-world__tab {

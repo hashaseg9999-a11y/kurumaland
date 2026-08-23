@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
+import { removeAndDispose } from '../objectCleanup';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LANES: Record<CarColorName, [number, number]> = {
@@ -41,7 +42,7 @@ export class BigSmallGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
-    for (const car of this.cars) car.group.removeFromParent();
+    for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
     this.cleanup = [];
     this.context = null;
