@@ -885,6 +885,13 @@ img {
   }
 }
 
+/* Desktop browsers have ample space in either orientation; skip the rotate prompt. */
+@media (orientation: portrait) and (hover: hover) and (pointer: fine) {
+  .orientation-overlay {
+    display: none;
+  }
+}
+
 /* Ending Screen and Scene Styles */
 .ending-screen {
   position: fixed;
