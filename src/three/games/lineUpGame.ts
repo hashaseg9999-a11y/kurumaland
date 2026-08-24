@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 type TrainColor = 'red' | 'blue' | 'green';
 const COLORS: readonly TrainColor[] = ['red', 'blue', 'green'];
@@ -40,12 +40,17 @@ export class LineUpGame implements GameModule {
   private sparkleUntil = 0;
   private guideBaseX = 0.15;
   private trackGroup?: THREE.Group;
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
+  private shakeUntil = 0;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'ならべて れっしゃ');
     this.hud.setProgress(0, 3);
     context.world.setCameraPreset('train');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     this.buildTrack();
     this.buildLocomotive();
     this.createCouplingGuide();
@@ -62,6 +67,10 @@ export class LineUpGame implements GameModule {
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
     this.sparkleUntil = 0;
     this.clearSparkles();
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     if (this.guideGroup) removeAndDispose(this.guideGroup);
     this.guideGroup = undefined;
     if (this.trackGroup) removeAndDispose(this.trackGroup);
@@ -170,6 +179,11 @@ export class LineUpGame implements GameModule {
     item.group.position.set(0, 0, targetZ);
     item.group.rotation.y = Math.PI;
     this.refreshGuide();
+    this.particles?.burst({ x: 0, y: 1, z: targetZ }, { count: 16 });
+    this.cameraPulse?.trigger();
+    if (this.cars.every((car) => car.attached)) {
+      this.shakeUntil = performance.now() + 640;
+    }
     this.spawnSparkles();
   }
 
@@ -310,6 +324,8 @@ export class LineUpGame implements GameModule {
   private update(delta: number): void {
     const now = performance.now();
     const time = now / 1000;
+    this.particles?.update(delta);
+    this.cameraPulse?.update(delta);
     for (const car of this.cars) {
       if (!car.attached && car.rejectUntil && now < car.rejectUntil) {
         car.group.rotation.z = Math.sin(time * 24) * 0.07;
@@ -340,15 +356,34 @@ export class LineUpGame implements GameModule {
       this.sparkleUntil = 0;
     }
 
+    if (this.shakeUntil && now < this.shakeUntil && this.locomotive) {
+      const shakeProgress = 1 - (this.shakeUntil - now) / 640;
+      const shake = Math.sin(shakeProgress * Math.PI * 6) * (1 - shakeProgress) * 0.035;
+      this.locomotive.position.x = shake;
+      for (const car of this.cars) {
+        if (car.attached) car.group.position.x = -shake * 0.8;
+      }
+    } else if (this.shakeUntil) {
+      this.shakeUntil = 0;
+      if (this.locomotive) this.locomotive.position.x = 0;
+      for (const car of this.cars) {
+        if (car.attached) car.group.position.x = 0;
+      }
+    }
+
     if (!this.trainRunning || !this.locomotive) return;
-    const speed = 7 * delta;
+    const speedFactor = Math.min(1, 0.35 + this.trainDistance / 12);
+    const speed = delta * 7 * speedFactor;
     this.trainDistance += speed;
     this.locomotive.position.z -= speed;
+    this.locomotive.position.y = Math.sin(time * 11) * 0.018;
+    this.cameraPulse?.trigger();
     let cursorZ = this.locomotive.position.z;
     for (const car of this.cars) {
       cursorZ += COUPLING_SPACING;
       car.group.position.z = cursorZ;
       car.group.position.x = Math.sin(performance.now() / 500 + cursorZ) * 0.04;
+      car.group.position.y = Math.sin(time * 10 + cursorZ * 1.7) * 0.016;
     }
     if (this.trainDistance > 48) {
       this.trainRunning = false;
@@ -361,6 +396,7 @@ export class LineUpGame implements GameModule {
     this.resetTimer = undefined;
     this.hud?.setProgress(0, 3);
     for (const car of this.cars) car.bounceUntil = undefined;
+    this.shakeUntil = 0;
     this.refreshGuide();
     if (!this.locomotive) return;
     this.locomotive.position.set(0, 0, LOCOMOTIVE_Z);

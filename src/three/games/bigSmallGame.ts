@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LANES: Record<CarColorName, [number, number]> = {
@@ -27,7 +27,10 @@ interface SlotVisual {
   big: boolean;
   material: THREE.MeshStandardMaterial;
   labelTexture: THREE.CanvasTexture;
+  arrowMesh?: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  arrowBaseY?: number;
   bounceUntil?: number;
+  flashUntil?: number;
 }
 
 export class BigSmallGame implements GameModule {
@@ -41,12 +44,17 @@ export class BigSmallGame implements GameModule {
   private moveAttached = false;
   private resetTimer?: number;
   private slots: SlotVisual[] = [];
+  private lastFrameAt: number | null = null;
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'おおきい・ちいさい');
     this.hud.setProgress(0, 8);
     context.world.setCameraPreset('size');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     for (const color of COLORS) this.buildSlots(color);
     for (const color of COLORS) this.buildPair(color);
     this.cleanup.push(
@@ -58,10 +66,19 @@ export class BigSmallGame implements GameModule {
   unmount(): void {
     for (const off of this.cleanup) off();
     this.hud?.dispose();
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
     for (const slot of this.slots) {
       removeAndDispose(slot.group);
       slot.labelTexture.dispose();
+      if (slot.arrowMesh) {
+        slot.arrowMesh.material.map?.dispose();
+        slot.arrowMesh.material.dispose();
+        slot.arrowMesh.geometry.dispose();
+      }
     }
     for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
@@ -92,10 +109,56 @@ export class BigSmallGame implements GameModule {
       coloredEdge.position.set(0, 0.01, -3.5);
       const label = this.createSlotLabel(big ? 'おおきい' : 'ちいさい', big ? '#e65100' : '#01579b');
       label.mesh.position.set(0, 1.15, big ? -6.35 : -5.45);
+      const arrowCanvas = document.createElement('canvas');
+      arrowCanvas.width = 256;
+      arrowCanvas.height = 128;
+      const arrowContext = arrowCanvas.getContext('2d');
+      if (!arrowContext) throw new Error('2D context is unavailable');
+      arrowContext.fillStyle = big ? '#e65100' : '#01579b';
+      arrowContext.beginPath();
+      if (big) {
+        // Outward-pointing arrows: size up cue.
+        for (const side of [-1, 1]) {
+          const cx = 128 + side * 62;
+          const dir = side;
+          arrowContext.moveTo(cx - dir * 34, 64);
+          arrowContext.lineTo(cx + dir * 22, 24);
+          arrowContext.lineTo(cx + dir * 22, 46);
+          arrowContext.lineTo(cx + dir * 52, 46);
+          arrowContext.lineTo(cx + dir * 52, 82);
+          arrowContext.lineTo(cx + dir * 22, 82);
+          arrowContext.lineTo(cx + dir * 22, 104);
+          arrowContext.closePath();
+        }
+      } else {
+        // Inward-pointing arrows: size down cue.
+        for (const side of [-1, 1]) {
+          const cx = 128 + side * 40;
+          const dir = -side;
+          arrowContext.moveTo(cx, 64);
+          arrowContext.lineTo(cx + dir * 30, 28);
+          arrowContext.lineTo(cx + dir * 30, 100);
+          arrowContext.closePath();
+        }
+      }
+      arrowContext.fill();
+      const arrowTexture = new THREE.CanvasTexture(arrowCanvas);
+      arrowTexture.colorSpace = THREE.SRGBColorSpace;
+      const arrowMaterial = new THREE.MeshBasicMaterial({
+        map: arrowTexture,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const arrowGeometry = new THREE.PlaneGeometry(2.3, 1.15);
+      const arrowMesh = new THREE.Mesh(arrowGeometry, arrowMaterial);
+      arrowMesh.rotation.x = -Math.PI / 6;
+      arrowMesh.position.set(0, 0.9, big ? -5.4 : -4.6);
+      visual.add(arrowMesh);
       visual.add(coloredEdge, frame, label.mesh);
       visual.position.x = x!;
       this.context.world.add(visual);
-      this.slots.push({ group: visual, big, material, labelTexture: label.texture });
+      this.slots.push({ group: visual, big, material, labelTexture: label.texture, arrowMesh, arrowBaseY: arrowMesh.position.y });
     }
   }
 
@@ -183,7 +246,12 @@ export class BigSmallGame implements GameModule {
         item.group.rotation.y = 0;
         item.rejectUntil = undefined;
         const slot = this.slots.find((entry) => entry.big === item.big);
-        if (slot) slot.bounceUntil = performance.now() + 480;
+        if (slot) {
+          slot.bounceUntil = performance.now() + 620;
+          slot.flashUntil = performance.now() + 540;
+        }
+        this.particles?.burst({ x: item.group.position.x, y: 1, z: item.group.position.z }, { count: 16 });
+        this.cameraPulse?.trigger();
         this.context.sfx('chime');
         this.context.speak(item.big ? 'おおきい！' : 'ちいさい！');
         this.context.complete();
@@ -239,16 +307,26 @@ export class BigSmallGame implements GameModule {
     const time = performance.now() / 1000;
     const now = performance.now();
     const targetBig = this.cars.find((car) => !car.parked)?.big;
+    const delta = this.lastFrameAt === null ? 1 / 60 : Math.min(0.1, Math.max(0, (now - this.lastFrameAt) / 1000));
+    this.lastFrameAt = now;
+    this.particles?.update(delta);
     for (const slot of this.slots) {
-      slot.material.emissiveIntensity = slot.big === targetBig
+      const flashRemaining = slot.flashUntil !== undefined ? slot.flashUntil - now : 0;
+      const flashBoost = flashRemaining > 0 ? (flashRemaining / 540) * 2.2 : 0;
+      slot.material.emissiveIntensity = (slot.big === targetBig
         ? THREE.MathUtils.clamp(0.12 + Math.sin(time * 2.4) * 0.165, 0.12, 0.45)
-        : 0;
+        : 0) + flashBoost;
       if (slot.bounceUntil !== undefined && now < slot.bounceUntil) {
         const progress = 1 - (slot.bounceUntil - now) / 480;
         slot.group.scale.y = 1 + Math.sin(progress * Math.PI) * 0.08;
       } else {
         slot.group.scale.y = 1;
         slot.bounceUntil = undefined;
+      }
+      if (slot.arrowMesh && slot.arrowBaseY !== undefined) {
+        const isTarget = slot.big === targetBig;
+        slot.arrowMesh.material.opacity = isTarget ? 0.85 + Math.sin(time * 3.2) * 0.15 : 0.4;
+        slot.arrowMesh.position.y = slot.arrowBaseY + (isTarget ? Math.sin(time * 2.6) * 0.06 : 0);
       }
     }
     for (const car of this.cars) {
@@ -260,6 +338,7 @@ export class BigSmallGame implements GameModule {
         car.group.rotation.z = 0;
       }
     }
+    this.cameraPulse?.update(delta);
   }
 
   private reset(): void {

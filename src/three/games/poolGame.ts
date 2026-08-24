@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 interface Ball3D {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -33,12 +33,16 @@ export class PoolGame implements GameModule {
   private nextBonusPulseAt = 0;
   private bonusTimeout?: number;
   private boundary?: THREE.Group;
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'ぼーるぷーる');
     this.hud.setProgress(0, 0);
     context.world.setCameraPreset('pool');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     this.createBoundary();
     for (let i = 0; i < 10; i++) this.createBall(i);
     this.cleanup.push(
@@ -51,6 +55,10 @@ export class PoolGame implements GameModule {
     for (const off of this.cleanup) off();
     this.hud?.dispose();
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     if (this.boundary) removeAndDispose(this.boundary);
     this.boundary = undefined;
     for (const ball of this.balls) removeAndDispose(ball.mesh);
@@ -196,6 +204,14 @@ export class PoolGame implements GameModule {
     this.context.sfx('chime');
     this.context.speak('やったー！ ボーナス！');
     this.context.complete();
+    const draggedBall = this.balls.find((ball) => ball.dragging);
+    if (draggedBall) {
+      this.particles?.burst(
+        { x: draggedBall.mesh.position.x, y: draggedBall.mesh.position.y + 0.4, z: draggedBall.mesh.position.z },
+        { count: 18 },
+      );
+    }
+    this.cameraPulse?.trigger();
     for (const ball of this.balls) {
       if (ball.dragging) continue;
       ball.velocity.x += (Math.random() - 0.5) * 7;
@@ -205,14 +221,24 @@ export class PoolGame implements GameModule {
 
   private update(delta: number): void {
     const time = performance.now();
+    this.particles?.update(delta);
+    this.cameraPulse?.update(delta);
     for (const ball of this.balls) {
       if (!ball.dragging) {
         ball.velocity.y -= GRAVITY * delta;
+        ball.velocity.x *= 1 - Math.min(0.6, delta * 0.35);
+        ball.velocity.z *= 1 - Math.min(0.6, delta * 0.35);
         ball.mesh.position.addScaledVector(ball.velocity, delta);
         if (ball.mesh.position.y < ball.radius) {
           ball.mesh.position.y = ball.radius;
-          ball.velocity.y = Math.abs(ball.velocity.y) * 0.72;
+          ball.velocity.y = Math.abs(ball.velocity.y) * 0.66;
           if (Math.abs(ball.velocity.y) > 1.2) this.context?.sfx('pop');
+          if (Math.abs(ball.velocity.y) > 2.2 && this.particles) {
+            this.particles.burst(
+              { x: ball.mesh.position.x, y: 0.25, z: ball.mesh.position.z },
+              { count: 5 },
+            );
+          }
         }
         if (Math.abs(ball.mesh.position.x) > POOL_MAX_X) {
           ball.mesh.position.x = Math.sign(ball.mesh.position.x) * POOL_MAX_X;
@@ -228,6 +254,46 @@ export class PoolGame implements GameModule {
         if (ball.dragging || Math.random() < 0.25) continue;
         ball.velocity.y = 7 + Math.random() * 5;
         ball.velocity.x += (Math.random() - 0.5) * 3;
+      }
+    }
+
+    // Ball-to-ball elastic collisions (simple impulse exchange).
+    for (let a = 0; a < this.balls.length; a += 1) {
+      const first = this.balls[a]!;
+      for (let b = a + 1; b < this.balls.length; b += 1) {
+        const second = this.balls[b]!;
+        const deltaPosition = second.mesh.position.clone().sub(first.mesh.position);
+        const distance = deltaPosition.length();
+        const minDistance = first.radius + second.radius;
+        if (distance >= minDistance || distance === 0) continue;
+        const normal = deltaPosition.divideScalar(distance);
+        const overlap = minDistance - distance;
+        const firstStatic = first.dragging;
+        const secondStatic = second.dragging;
+        if (!firstStatic && !secondStatic) {
+          first.mesh.position.addScaledVector(normal, -overlap / 2);
+          second.mesh.position.addScaledVector(normal, overlap / 2);
+        } else if (firstStatic && !secondStatic) {
+          second.mesh.position.addScaledVector(normal, overlap);
+        } else if (!firstStatic && secondStatic) {
+          first.mesh.position.addScaledVector(normal, -overlap);
+        }
+        const relativeVelocity = second.velocity.clone().sub(first.velocity);
+        const separatingSpeed = relativeVelocity.dot(normal);
+        if (separatingSpeed >= 0) continue;
+        const impulseMagnitude = -separatingSpeed * 0.5;
+        if (!firstStatic) first.velocity.addScaledVector(normal, -impulseMagnitude * 0.78);
+        if (!secondStatic) second.velocity.addScaledVector(normal, impulseMagnitude * 0.78);
+        if (Math.abs(separatingSpeed) > 2.4 && this.particles) {
+          this.particles.burst(
+            {
+              x: first.mesh.position.x + normal.x * first.radius,
+              y: Math.max(0.3, (first.mesh.position.y + second.mesh.position.y) / 2),
+              z: first.mesh.position.z + normal.z * first.radius,
+            },
+            { count: 4 },
+          );
+        }
       }
     }
   }

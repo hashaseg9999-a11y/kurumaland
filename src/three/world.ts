@@ -1,11 +1,9 @@
 import {
   ACESFilmicToneMapping,
-  AdditiveBlending,
   AmbientLight,
   BackSide,
   BoxGeometry,
   CanvasTexture,
-  CircleGeometry,
   Color,
   ConeGeometry,
   CylinderGeometry,
@@ -18,7 +16,6 @@ import {
   InstancedMesh,
   Matrix4,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   PCFSoftShadowMap,
   PerspectiveCamera,
@@ -33,6 +30,7 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  PMREMGenerator,
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
 import type { CameraPresetName, FrameHandler, PointerRayHandler, World3D } from './contracts';
@@ -74,6 +72,7 @@ const ROOF_COLORS = ['#e2574d', '#4f86c6', '#f0a63c', '#67a86b', '#8b6fc0'];
 const ACCENT_COLORS = ['#ff7f6a', '#ffc94d', '#57c7ff', '#7bd88f'];
 const LEAF_COLORS = ['#4caf50', '#3d9142', '#5fb963', '#2f8f4e', '#6dbf74'];
 const FLOWER_COLORS = ['#ff6f91', '#ffd166', '#7bd88f', '#9b8cff', '#ff9f68'];
+const GLASS_TINTS = ['#ffffff', '#f2fbff', '#fff6de', '#eaf6ff', '#fdf3ea'];
 
 function mulberry32(seed: number): () => number {
   let state = seed | 0;
@@ -88,6 +87,13 @@ function mulberry32(seed: number): () => number {
 function smoothstep(edge0: number, edge1: number, value: number): number {
   const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
+}
+
+function shadeColor(hex: string, amount: number): string {
+  const color = new Color(hex);
+  if (amount >= 0) color.lerp(new Color('#ffffff'), Math.min(1, amount));
+  else color.lerp(new Color('#000000'), Math.min(1, -amount));
+  return '#' + color.getHexString();
 }
 
 function terrainHeight(x: number, z: number): number {
@@ -108,14 +114,6 @@ const PRESETS = {
   pool: { position: [0, 9.2, 14.6], target: [0, 1.1, -1.4] },
   train: { position: [0, 6.8, 11.6], target: [0, 1.0, -1.8] },
 } as const;
-
-const PRESET_SKY: Record<keyof typeof PRESETS, { top: string; horizon: string; ground: string }> = {
-  drive: { top: '#7ec8f7', horizon: '#dff1fb', ground: '#7fb168' },
-  garage: { top: '#8fd0f2', horizon: '#e8f6ff', ground: '#8fbf72' },
-  size: { top: '#a5d8ff', horizon: '#eef8ff', ground: '#95c98a' },
-  pool: { top: '#8ed4f5', horizon: '#f0fbff', ground: '#8cc27a' },
-  train: { top: '#9fd4ef', horizon: '#f2f9f2', ground: '#a3cf8f' },
-};
 
 export class ThreeWorld implements World3D {
   readonly scene = new Scene();
@@ -145,13 +143,10 @@ export class ThreeWorld implements World3D {
   private previousCameraPosition: Vec3 = [0, 4.4, 10.2];
   private previousCameraTarget: Vec3 = [0, 1.1, -4];
   private currentCameraTarget: Vec3 = [0, 1.1, -4];
-  private readonly skyUniforms = {
-    topColor: { value: new Color(PRESET_SKY.drive.top) },
-    bottomColor: { value: new Color(PRESET_SKY.drive.horizon) },
-    offset: { value: 18 },
-    exponent: { value: 0.72 },
-  };
   private readonly sunLight: DirectionalLight;
+  private readonly environment = {
+    renderTarget: null as import('three').WebGLRenderTarget | null,
+  };
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private qualityStep = 0;
   private qualitySampleFrames = 0;
@@ -162,59 +157,31 @@ export class ThreeWorld implements World3D {
     this.canvas = this.renderer.domElement;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.06;
+    this.renderer.toneMappingExposure = 1.03;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.canvas.className = 'three-world__canvas';
     this.canvas.style.touchAction = 'none';
     this.camera.far = 420;
-    const skyGeometry = new SphereGeometry(240, 24, 14);
-    const skyMaterial = new ShaderMaterial({
-      uniforms: this.skyUniforms,
-      vertexShader: `
-        varying vec3 vWorldPosition;
-        void main() {
-          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPosition.xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 topColor;
-        uniform vec3 bottomColor;
-        uniform float offset;
-        uniform float exponent;
-        varying vec3 vWorldPosition;
-        void main() {
-          float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
-          gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-        }
-      `,
-      side: BackSide,
-      depthWrite: false,
-    });
-    const sky = new Mesh(skyGeometry, skyMaterial);
-    this.scene.add(sky);
-    this.disposables.push(skyGeometry, skyMaterial);
-    this.scene.fog = new Fog(PALETTE.fog, 42, 175);
+    this.scene.fog = new Fog('#d8ecfa', 48, 205);
 
-    const hemisphere = new HemisphereLight(PALETTE.skylight, PALETTE.ground, 0.85);
+    const hemisphere = new HemisphereLight(PALETTE.skylight, PALETTE.ground, 0.92);
     const sun = new DirectionalLight(PALETTE.sunlight, 2.3);
     this.sunLight = sun;
-    sun.position.set(18, 26, 14);
+    sun.position.set(22, 31, 16);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.left = -30;
     sun.shadow.camera.right = 30;
     sun.shadow.camera.top = 30;
     sun.shadow.camera.bottom = -30;
     sun.shadow.camera.near = 4;
     sun.shadow.camera.far = 95;
-    sun.shadow.bias = -0.00035;
-    sun.shadow.normalBias = 0.02;
-    const bounce = new DirectionalLight(PALETTE.bounce, 0.45);
+    sun.shadow.bias = -0.00012;
+    sun.shadow.normalBias = 0.028;
+    const bounce = new DirectionalLight(PALETTE.bounce, 0.58);
     bounce.position.set(-20, 14, -16);
-    const ambient = new AmbientLight('#ffffff', 0.18);
+    const ambient = new AmbientLight('#ffffff', 0.2);
     this.scene.add(hemisphere, sun, bounce, ambient);
 
     this.createSky();
@@ -222,6 +189,7 @@ export class ThreeWorld implements World3D {
     this.createStreet();
     this.createTown();
     this.createClouds();
+    this.createEnvironmentMap();
     this.scene.add(this.clouds);
     this.container.append(this.canvas);
     this.resizeToContainer();
@@ -261,9 +229,6 @@ export class ThreeWorld implements World3D {
   }
 
   setCameraPreset(preset: CameraPresetName): void {
-    const sky = PRESET_SKY[preset];
-    this.skyUniforms.topColor.value.set(sky.top);
-    this.skyUniforms.bottomColor.value.set(sky.horizon);
     if (this.reducedMotion) {
       this.cameraPreset = preset;
       this.cameraTransition = 0;
@@ -300,11 +265,12 @@ export class ThreeWorld implements World3D {
   }
 
   private createSky(): void {
-    const skyGeometry = new SphereGeometry(210, 32, 18);
-    const sunDirection = new Vector3(18, 26, 14).normalize();
+    const skyGeometry = new SphereGeometry(240, 32, 18);
+    const sunDirection = new Vector3(22, 31, 16).normalize();
     const skyMaterial = new ShaderMaterial({
       side: BackSide,
       depthWrite: false,
+      fog: false,
       uniforms: {
         topColor: { value: new Color(PALETTE.skyTop) },
         midColor: { value: new Color(PALETTE.skyMid) },
@@ -331,7 +297,7 @@ export class ThreeWorld implements World3D {
         '  vec3 color = mix(horizonColor, midColor, smoothstep(-0.02, 0.18, dir.y));',
         '  color = mix(color, topColor, smoothstep(0.16, 0.62, dir.y));',
         '  float alignment = max(dot(dir, normalize(sunDirection)), 0.0);',
-        '  color += sunColor * (pow(alignment, 8.0) * 0.2 + pow(alignment, 220.0) * 0.5);',
+        '  color += sunColor * (pow(alignment, 14.0) * 0.24 + pow(alignment, 420.0) * 0.58);',
         '  gl_FragColor = vec4(color, 1.0);',
         '  #include <tonemapping_fragment>',
         '  #include <colorspace_fragment>',
@@ -339,31 +305,32 @@ export class ThreeWorld implements World3D {
       ].join('\n'),
     });
     const sky = new Mesh(skyGeometry, skyMaterial);
+    sky.userData.isWorldSky = true;
     sky.renderOrder = -2;
     sky.frustumCulled = false;
 
-    const sunPosition = sunDirection.clone().multiplyScalar(195);
-    const haloGeometry = new CircleGeometry(18, 28);
-    const haloMaterial = new MeshBasicMaterial({
-      color: PALETTE.sunHalo,
-      transparent: true,
-      opacity: 0.26,
-      blending: AdditiveBlending,
-      depthWrite: false,
-      fog: false,
+    this.scene.add(sky);
+    this.disposables.push(skyGeometry, skyMaterial);
+  }
+
+  private createEnvironmentMap(): void {
+    const sky = this.scene.children.find((child) => child.userData.isWorldSky);
+    if (!sky) return;
+    const sourceScene = new Scene();
+    this.scene.remove(sky);
+    sourceScene.add(sky);
+    const generator = new PMREMGenerator(this.renderer);
+    const renderTarget = generator.fromScene(sourceScene, 0, 0.1, 300);
+    sourceScene.clear();
+    generator.dispose();
+    this.scene.add(sky);
+    this.environment.renderTarget = renderTarget;
+    this.scene.environment = renderTarget.texture;
+    this.disposables.push(renderTarget, {
+      dispose: () => {
+        this.scene.environment = null;
+      },
     });
-    const halo = new Mesh(haloGeometry, haloMaterial);
-    halo.position.copy(sunPosition);
-    halo.lookAt(0, 16, 0);
-    halo.renderOrder = -1;
-    const discGeometry = new CircleGeometry(7.5, 28);
-    const discMaterial = new MeshBasicMaterial({ color: PALETTE.sunDisc, fog: false, depthWrite: false });
-    const disc = new Mesh(discGeometry, discMaterial);
-    disc.position.copy(sunPosition);
-    disc.lookAt(0, 16, 0);
-    disc.renderOrder = -1;
-    this.scene.add(sky, halo, disc);
-    this.disposables.push(skyGeometry, skyMaterial, haloGeometry, haloMaterial, discGeometry, discMaterial);
   }
 
   private createSurfaceTexture(kind: 'grass' | 'asphalt' | 'concrete'): CanvasTexture {
@@ -374,25 +341,36 @@ export class ThreeWorld implements World3D {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable');
     if (kind === 'grass') {
+      const rng = mulberry32(20260825);
       ctx.fillStyle = PALETTE.grassA;
       ctx.fillRect(0, 0, size, size);
-      const tones = ['#6cba5d', '#71bf62', '#82ca70', '#5aa855'];
-      for (let index = 0; index < 260; index++) {
-        ctx.fillStyle = tones[Math.floor(Math.random() * tones.length)] ?? PALETTE.grassA;
-        ctx.globalAlpha = 0.08 + Math.random() * 0.12;
-        const radius = 3 + Math.random() * 9;
+      const patchTones = ['#6cb75d', '#7ec76b', '#58a752', '#8ed07a', '#a3cd68'];
+      for (let index = 0; index < 22; index++) {
+        ctx.fillStyle = patchTones[Math.floor(rng() * patchTones.length)] ?? PALETTE.grassA;
+        ctx.globalAlpha = 0.16 + rng() * 0.18;
+        const radius = 12 + rng() * 26;
         ctx.beginPath();
-        ctx.arc(Math.random() * size, Math.random() * size, radius, 0, Math.PI * 2);
+        ctx.arc(rng() * size, rng() * size, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const bladeTones = ['#69b558', '#79c467', '#549e4f', '#86cc72'];
+      for (let index = 0; index < 320; index++) {
+        ctx.fillStyle = bladeTones[Math.floor(rng() * bladeTones.length)] ?? PALETTE.grassA;
+        ctx.globalAlpha = 0.06 + rng() * 0.12;
+        const radius = 0.8 + rng() * 2.4;
+        ctx.beginPath();
+        ctx.arc(rng() * size, rng() * size, radius, 0, Math.PI * 2);
         ctx.fill();
       }
     } else {
+      const rng = mulberry32(kind === 'asphalt' ? 20260826 : 20260827);
       ctx.fillStyle = kind === 'asphalt' ? PALETTE.road : PALETTE.sidewalk;
       ctx.fillRect(0, 0, size, size);
       const speckle = kind === 'asphalt' ? ['#5a6572', '#47525d', '#616d7a'] : ['#dde4e8', '#f2f5f7', '#d5dde1'];
       for (let index = 0; index < 1300; index++) {
-        ctx.fillStyle = speckle[Math.floor(Math.random() * speckle.length)] ?? '#808080';
-        ctx.globalAlpha = 0.05 + Math.random() * 0.1;
-        ctx.fillRect(Math.random() * size, Math.random() * size, 1.6, 1.6);
+        ctx.fillStyle = speckle[Math.floor(rng() * speckle.length)] ?? '#808080';
+        ctx.globalAlpha = 0.05 + rng() * 0.1;
+        ctx.fillRect(rng() * size, rng() * size, 1.6, 1.6);
       }
       if (kind === 'concrete') {
         ctx.globalAlpha = 0.16;
@@ -434,7 +412,9 @@ export class ThreeWorld implements World3D {
       const height = terrainHeight(x, z);
       positions.setY(index, height - 0.04);
       const patch = Math.sin(x * 0.11) * Math.sin(z * 0.13) * 0.5 + 0.5;
+      const macroPatch = Math.sin(x * 0.031 + z * 0.024) * Math.sin(x * 0.017 - z * 0.028) * 0.5 + 0.5;
       const color = colorA.clone().lerp(colorB, patch);
+      color.lerp(dry, macroPatch * 0.18);
       if (height > 1.4) color.lerp(dry, Math.min(0.55, (height - 1.4) / 2.4));
       colors.push(color.r, color.g, color.b);
     }
@@ -620,17 +600,20 @@ export class ThreeWorld implements World3D {
       const depth = kind === 'house' ? 4.5 + rng() * 1.5 : width * 0.78;
       const height = kind === 'house' ? 3 + rng() * 1.2 : kind === 'shop' ? 4.5 + rng() * 1.5 : 8 + rng() * 5;
       const bodyColor = BODY_COLORS[Math.floor(rng() * BODY_COLORS.length)] ?? '#fdf6ec';
+      const bodyTint = 1 + (rng() - 0.5) * 0.14;
+      const tintedBody = shadeColor(bodyColor, (bodyTint - 1) * 3.2);
+      const roofShade = -rng() * 0.18;
       const forwardX = Math.sin(ry);
       const forwardZ = Math.cos(ry);
       const rightX = Math.cos(ry);
       const rightZ = -Math.sin(ry);
 
-      boxes.push({ p: [x, baseY + height / 2, z], ry, s: [width, height, depth], color: bodyColor });
+      boxes.push({ p: [x, baseY + height / 2, z], ry, s: [width, height, depth], color: tintedBody });
 
       if (kind === 'house') {
         const roofHeight = 1.6 + rng() * 0.9;
         const roofRadius = Math.max(width, depth) * 0.72;
-        const roofColor = ROOF_COLORS[Math.floor(rng() * ROOF_COLORS.length)] ?? '#e2574d';
+        const roofColor = shadeColor(ROOF_COLORS[Math.floor(rng() * ROOF_COLORS.length)] ?? '#e2574d', roofShade);
         cones.push({
           p: [x, baseY + height + roofHeight / 2 - 0.04, z],
           ry: ry + Math.PI / 4,
@@ -650,32 +633,35 @@ export class ThreeWorld implements World3D {
             p: [x + rightX * offset + forwardX * (depth / 2 + 0.04), baseY + 1.9, z + rightZ * offset + forwardZ * (depth / 2 + 0.04)],
             ry,
             s: [0.95, 1.05, 1],
+            color: GLASS_TINTS[Math.floor(rng() * GLASS_TINTS.length)],
           });
         }
         return;
       }
 
-      boxes.push({ p: [x, baseY + height + 0.16, z], ry, s: [width + 0.3, 0.34, depth + 0.3], color: '#e6ebef' });
+      boxes.push({ p: [x, baseY + height + 0.16, z], ry, s: [width + 0.3, 0.34, depth + 0.3], color: shadeColor('#e6ebef', (rng() - 0.5) * 0.08) });
       doors.push({ p: [x + forwardX * (depth / 2 + 0.03), baseY + 1.1, z + forwardZ * (depth / 2 + 0.03)], ry, s: [1.4, 2.2, 1] });
       if (kind === 'shop') {
         const accent = ACCENT_COLORS[Math.floor(rng() * ACCENT_COLORS.length)] ?? '#ffc94d';
+        const shadedAccent = shadeColor(accent, (rng() - 0.5) * 0.12);
         boxes.push({
           p: [x + forwardX * (depth / 2 + 0.55), baseY + 2.75, z + forwardZ * (depth / 2 + 0.55)],
           ry,
           s: [width * 0.84, 0.12, 1.5],
-          color: accent,
+          color: shadedAccent,
         });
         boxes.push({
           p: [x + forwardX * (depth / 2 + 0.06), baseY + 3.5, z + forwardZ * (depth / 2 + 0.06)],
           ry,
           s: [width * 0.72, 0.62, 0.08],
-          color: accent,
+          color: shadedAccent,
         });
         for (const offset of [-width * 0.3, 0, width * 0.3]) {
           glass.push({
             p: [x + rightX * offset + forwardX * (depth / 2 + 0.04), baseY + 2.1, z + rightZ * offset + forwardZ * (depth / 2 + 0.04)],
             ry,
             s: [1.15, 1.35, 1],
+            color: GLASS_TINTS[Math.floor(rng() * GLASS_TINTS.length)],
           });
         }
         return;
@@ -690,6 +676,7 @@ export class ThreeWorld implements World3D {
             p: [x + rightX * offsetX + forwardX * (depth / 2 + 0.04), baseY + 1.5 + row * 2.3, z + rightZ * offsetX + forwardZ * (depth / 2 + 0.04)],
             ry,
             s: [0.85, 1.2, 1],
+            color: GLASS_TINTS[Math.floor(rng() * GLASS_TINTS.length)],
           });
         }
       }
@@ -725,7 +712,8 @@ export class ThreeWorld implements World3D {
       const trunkHeight = (1.5 + rng() * 0.9) * scale;
       const radiusFactor = (0.9 + rng() * 0.25) * scale;
       trunks.push({ p: [x, y, z], ry: rng() * Math.PI * 2, s: [radiusFactor, trunkHeight, radiusFactor], color: PALETTE.trunk });
-      const leafColor = LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)] ?? '#4caf50';
+      const baseLeaf = LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)] ?? '#4caf50';
+      const leafColor = shadeColor(baseLeaf, (rng() - 0.5) * 0.22);
       const mainSize = (1 + rng() * 0.5) * scale;
       canopies.push({
         p: [x, y + trunkHeight + mainSize * 0.45, z],
@@ -763,7 +751,7 @@ export class ThreeWorld implements World3D {
         p: [side * (7.35 + rng() * 1.1), 0.18 + sy * 0.55, -96 + rng() * 192],
         ry: rng() * Math.PI,
         s: [sx, sy, sx],
-        color: LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)],
+        color: shadeColor(LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)] ?? '#4caf50', (rng() - 0.5) * 0.2),
       });
     }
 
@@ -837,12 +825,14 @@ export class ThreeWorld implements World3D {
   private createClouds(): void {
     const puffGeometry = new SphereGeometry(1, 14, 11);
     const cloudMaterial = new MeshStandardMaterial({ color: PALETTE.cloud, roughness: 0.96, metalness: 0 });
+    const cloudShadeMaterial = new MeshStandardMaterial({ color: '#e6f2fb', roughness: 0.98, metalness: 0 });
     const rng = mulberry32(777);
     for (let index = 0; index < 11; index++) {
       const cloud = new Group();
       const puffCount = 3 + Math.floor(rng() * 3);
       for (let puffIndex = 0; puffIndex < puffCount; puffIndex++) {
-        const puff = new Mesh(puffGeometry, cloudMaterial);
+        const isShade = puffIndex % 3 === 2 || rng() < 0.22;
+        const puff = new Mesh(puffGeometry, isShade ? cloudShadeMaterial : cloudMaterial);
         const scale = 1 + rng() * 1.4;
         puff.position.set(
           (puffIndex - puffCount / 2) * 1.7 + (rng() - 0.5),
@@ -858,7 +848,7 @@ export class ThreeWorld implements World3D {
       this.clouds.add(cloud);
     }
     this.scene.add(this.clouds);
-    this.disposables.push(puffGeometry, cloudMaterial);
+    this.disposables.push(puffGeometry, cloudMaterial, cloudShadeMaterial);
   }
 
   private buildInstanced(

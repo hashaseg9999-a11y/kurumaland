@@ -21,45 +21,73 @@ export const CAR_COLORS: Record<CarColorName, string> = {
 
 export type CarSilhouette = 'sedan' | 'van' | 'truck';
 
+function createWheelArch(): Mesh<TorusGeometry, MeshStandardMaterial> {
+  const arch = new Mesh(
+    new TorusGeometry(0.47, 0.055, 8, 18, Math.PI),
+    new MeshStandardMaterial({ color: '#000000', roughness: 0.55 }),
+  );
+  arch.rotation.y = Math.PI / 2;
+  return arch;
+}
+
 function createStyledWheel(): Group {
   const wheel = new Group();
-  const wheelGeometry = new CylinderGeometry(0.37, 0.37, 0.28, 24);
-  const wheelSideGeometry = new CylinderGeometry(0.385, 0.385, 0.05, 24);
-  const hubGeometry = new CylinderGeometry(0.19, 0.19, 0.31, 16);
-  const spokeGeometry = new BoxGeometry(0.28, 0.26, 0.075);
-  const tyreMaterial = new MeshStandardMaterial({ color: '#2b3238', roughness: 0.82 });
-  const tyreSideMaterial = new MeshStandardMaterial({ color: '#465158', roughness: 0.68 });
+  const wheelGeometry = new CylinderGeometry(0.37, 0.37, 0.28, 28);
+  const wheelSideGeometry = new CylinderGeometry(0.39, 0.39, 0.055, 28);
+  const sidewallGeometry = new TorusGeometry(0.372, 0.034, 8, 28);
+  const hubGeometry = new CylinderGeometry(0.19, 0.19, 0.31, 18);
+  const spokeGeometry = new RoundedBoxGeometry(0.3, 0.27, 0.08, 2, 0.03);
+  const caliperGeometry = new RoundedBoxGeometry(0.1, 0.19, 0.13, 2, 0.03);
+  const treadBlockGeometry = new BoxGeometry(0.06, 0.2, 0.3);
+  const tyreMaterial = new MeshStandardMaterial({ color: '#23282d', roughness: 0.88 });
+  const tyreSideMaterial = new MeshStandardMaterial({ color: '#3c444b', roughness: 0.72 });
   const hubMaterial = new MeshStandardMaterial({
-    color: '#dfe7ec',
-    metalness: 0.72,
-    roughness: 0.24,
+    color: '#e3ebf0',
+    metalness: 0.85,
+    roughness: 0.18,
+  });
+  const caliperMaterial = new MeshStandardMaterial({
+    color: '#e05a4e',
+    metalness: 0.35,
+    roughness: 0.38,
   });
   const tyre = new Mesh(wheelGeometry, tyreMaterial);
   const leftTyreSide = new Mesh(wheelSideGeometry, tyreSideMaterial);
   const rightTyreSide = new Mesh(wheelSideGeometry.clone(), tyreSideMaterial);
+  const leftSidewall = new Mesh(sidewallGeometry, tyreSideMaterial);
+  const rightSidewall = new Mesh(sidewallGeometry.clone(), tyreSideMaterial);
   const hub = new Mesh(hubGeometry, hubMaterial);
-  const spoke = new Mesh(spokeGeometry, hubMaterial);
-  const crossSpoke = new Mesh(spokeGeometry.clone(), hubMaterial);
-  const treadA = new Mesh(new BoxGeometry(0.06, 0.2, 0.3), tyreSideMaterial);
-  const treadB = new Mesh(treadA.geometry.clone(), tyreSideMaterial);
+  const spokeA = new Mesh(spokeGeometry, hubMaterial);
+  const spokeB = new Mesh(spokeGeometry.clone(), hubMaterial);
+  const caliper = new Mesh(caliperGeometry, caliperMaterial);
+  const treadA = new Mesh(treadBlockGeometry, tyreSideMaterial);
+  const treadB = new Mesh(treadBlockGeometry.clone(), tyreSideMaterial);
 
   for (const item of [tyre, leftTyreSide, rightTyreSide, hub]) {
     item.rotation.z = Math.PI / 2;
   }
-  crossSpoke.rotation.x = Math.PI / 2;
+  leftSidewall.rotation.y = Math.PI / 2;
+  rightSidewall.rotation.y = Math.PI / 2;
+  leftSidewall.position.x = 0.128;
+  rightSidewall.position.x = -0.128;
+  spokeB.rotation.x = Math.PI / 2;
+  caliper.position.set(0, 0.2, 0.14);
   leftTyreSide.position.x = 0.125;
   rightTyreSide.position.x = -0.125;
-  treadA.position.set(-0.15, 0.24, 0);
-  treadB.position.set(-0.15, -0.24, 0);
+  treadA.position.set(-0.155, 0.245, 0);
+  treadB.position.set(-0.155, -0.245, 0);
   treadA.rotation.x = Math.PI / 2;
   treadB.rotation.x = Math.PI / 2;
   wheel.add(
     tyre,
     leftTyreSide,
     rightTyreSide,
+    leftSidewall,
+    rightSidewall,
     hub,
-    spoke,
-    crossSpoke,
+    spokeA,
+    spokeB,
+    caliper,
     treadA,
     treadB,
   );
@@ -77,18 +105,20 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
 
   const paintMaterial = new MeshPhysicalMaterial({
     color: bodyColor,
-    roughness: 0.18,
-    metalness: 0.16,
+    roughness: 0.14,
+    metalness: 0.38,
     clearcoat: 1,
-    clearcoatRoughness: 0.12,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 1.2,
   });
   const accentMaterial = new MeshStandardMaterial({ color: bodyColor, roughness: 0.34 });
   const glassMaterial = new MeshPhysicalMaterial({
-    color: '#d8f6ff',
+    color: '#c4ecff',
     roughness: 0.05,
     metalness: 0.04,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.62,
+    envMapIntensity: 1.5,
   });
   const hubMaterial = new MeshStandardMaterial({ color: '#dfe7ec', metalness: 0.72, roughness: 0.24 });
   const headlightMaterial = new MeshStandardMaterial({ color: '#fffbe6', emissive: '#ffe27a', emissiveIntensity: 0.65 });
@@ -116,57 +146,82 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
 
   if (silhouette === 'van') {
     const lowerGeometry = new RoundedBoxGeometry(1.44, 0.6, 2.66, 3, 0.13);
-    const bodyGeometry = new RoundedBoxGeometry(1.36, 1.04, 2.48, 4, 0.21);
+    const cabGeometry = new RoundedBoxGeometry(1.34, 0.72, 0.8, 3, 0.14);
+    const cargoGeometry = new RoundedBoxGeometry(1.38, 1.06, 1.98, 4, 0.2);
     const roofCapGeometry = new RoundedBoxGeometry(1.27, 0.13, 2.33, 3, 0.055);
-    const windshieldGeometry = new BoxGeometry(1.14, 0.52, 0.06);
-    const sideGlassGeometry = new BoxGeometry(0.04, 0.44, 1.8);
+    const windshieldGeometry = new BoxGeometry(1.16, 0.48, 0.06);
+    const cabSideGlassGeometry = new BoxGeometry(0.04, 0.4, 0.62);
+    const cargoWindowGeometry = new BoxGeometry(0.04, 0.34, 0.5);
     const bumperGeometry = new BoxGeometry(1.44, 0.18, 0.14);
     const acUnitGeometry = new RoundedBoxGeometry(0.7, 0.11, 0.5, 2, 0.04);
     const roofRailGeometry = new CylinderGeometry(0.035, 0.035, 2.02, 8);
     const vanDoorLineGeometry = new BoxGeometry(0.02, 0.58, 0.025);
     const handleGeometry = new RoundedBoxGeometry(0.2, 0.055, 0.055, 2, 0.024);
+    const steeringWheelGeometry = new TorusGeometry(0.1, 0.026, 10, 20);
+    const seatBaseGeometry = new RoundedBoxGeometry(0.72, 0.26, 0.42, 2, 0.08);
+    const seatBackGeometry = new RoundedBoxGeometry(0.72, 0.4, 0.13, 2, 0.06);
 
     const lower = new Mesh(lowerGeometry, accentMaterial);
     lower.position.y = 0.66;
-    const body = new Mesh(bodyGeometry, paintMaterial);
-    body.position.set(0, 1.42, -0.04);
+    const cab = new Mesh(cabGeometry, paintMaterial);
+    cab.position.set(0, 1.3, 0.9);
+    const cargo = new Mesh(cargoGeometry, paintMaterial);
+    cargo.position.set(0, 1.4, -0.32);
     const roofCap = new Mesh(roofCapGeometry, accentMaterial);
-    roofCap.position.set(0, 1.99, -0.04);
+    roofCap.position.set(0, 1.97, -0.32);
     const windshield = new Mesh(windshieldGeometry, glassMaterial);
-    windshield.position.set(0, 1.58, 1.22);
-    windshield.rotation.x = -0.08;
-    const leftSideGlass = new Mesh(sideGlassGeometry, glassMaterial);
-    leftSideGlass.position.set(-0.69, 1.58, -0.1);
-    const rightSideGlass = new Mesh(sideGlassGeometry.clone(), glassMaterial);
-    rightSideGlass.position.set(0.69, 1.58, -0.1);
+    windshield.position.set(0, 1.5, 1.26);
+    windshield.rotation.x = -0.16;
+    const leftCabGlass = new Mesh(cabSideGlassGeometry, glassMaterial);
+    leftCabGlass.position.set(-0.68, 1.44, 0.88);
+    const rightCabGlass = new Mesh(cabSideGlassGeometry.clone(), glassMaterial);
+    rightCabGlass.position.set(0.68, 1.44, 0.88);
+    const leftCargoWindow = new Mesh(cargoWindowGeometry, glassMaterial);
+    leftCargoWindow.position.set(-0.7, 1.52, -0.35);
+    const rightCargoWindow = new Mesh(cargoWindowGeometry.clone(), glassMaterial);
+    rightCargoWindow.position.set(0.7, 1.52, -0.35);
     const frontBumper = new Mesh(bumperGeometry, darkMaterial);
     frontBumper.position.set(0, 0.52, 1.34);
     const rearBumper = new Mesh(bumperGeometry.clone(), darkMaterial);
     rearBumper.position.set(0, 0.52, -1.34);
     const acUnit = new Mesh(acUnitGeometry, whiteMaterial);
-    acUnit.position.set(0, 2.09, 0.3);
+    acUnit.position.set(0, 2.07, -0.3);
+    const steeringWheel = new Mesh(steeringWheelGeometry, darkMaterial);
+    steeringWheel.position.set(-0.3, 1.38, 0.78);
+    steeringWheel.rotation.x = -0.3;
+    const seatBase = new Mesh(seatBaseGeometry, darkMaterial);
+    seatBase.position.set(-0.3, 1.28, 0.52);
+    const seatBack = new Mesh(seatBackGeometry, darkMaterial);
+    seatBack.position.set(-0.3, 1.5, 0.32);
 
-    car.add(lower, body, roofCap, windshield, leftSideGlass, rightSideGlass,
-      frontBumper, rearBumper, acUnit);
+    car.add(lower, cab, cargo, roofCap, windshield, leftCabGlass, rightCabGlass,
+      leftCargoWindow, rightCargoWindow, frontBumper, rearBumper, acUnit,
+      steeringWheel, seatBase, seatBack);
 
     for (const railX of [-0.34, 0.34]) {
       const roofRail = new Mesh(roofRailGeometry, chromeRailMaterial);
-      roofRail.position.set(railX!, 2.09, -0.04);
+      roofRail.position.set(railX!, 2.05, -0.32);
       car.add(roofRail);
     }
+
+    for (const [x, z] of wheelPositions) {
+      const arch = createWheelArch();
+      arch.position.set(x!, 0.37, z!);
+      car.add(arch);
+    }
     for (const sideX of [-0.69, 0.69]) {
-      for (const lineZ of [0.46, -0.64]) {
+      for (const lineZ of [0.86, -0.64]) {
         const doorLine = new Mesh(vanDoorLineGeometry, darkMaterial);
-        doorLine.position.set(sideX!, 1.28, lineZ!);
+        doorLine.position.set(sideX!, 1.24, lineZ!);
         car.add(doorLine);
       }
       const doorHandle = new Mesh(handleGeometry, chromeRailMaterial);
-      doorHandle.position.set(sideX!, 1.52, 0.2);
+      doorHandle.position.set(sideX!, 1.5, 0.6);
       car.add(doorHandle);
     }
 
-    faceEyeY = 1.52;
-    faceSmileY = 1.38;
+    faceEyeY = 1.44;
+    faceSmileY = 1.3;
     headlightY = 0.92;
     taillightY = 1.3;
   } else if (silhouette === 'truck') {
@@ -175,6 +230,9 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
     const cabRoofGeometry = new RoundedBoxGeometry(1.29, 0.13, 0.99, 2, 0.05);
     const windshieldGeometry = new BoxGeometry(1.14, 0.4, 0.06);
     const sideWindowGeometry = new BoxGeometry(0.04, 0.34, 0.72);
+    const steeringWheelGeometry = new TorusGeometry(0.1, 0.026, 10, 20);
+    const seatBaseGeometry = new RoundedBoxGeometry(0.72, 0.24, 0.4, 2, 0.08);
+    const seatBackGeometry = new RoundedBoxGeometry(0.72, 0.36, 0.12, 2, 0.055);
     const grilleGeometry = new BoxGeometry(1.06, 0.2, 0.07);
     const bedFloorGeometry = new BoxGeometry(1.48, 0.1, 1.52);
     const bedSideGeometry = new BoxGeometry(0.08, 0.5, 1.52);
@@ -190,11 +248,20 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
     cabRoof.position.set(0, 1.73, 0.78);
     const windshield = new Mesh(windshieldGeometry, glassMaterial);
     windshield.position.set(0, 1.4, 1.33);
-    windshield.rotation.x = -0.12;
+    windshield.rotation.x = -0.2;
     const leftCabWindow = new Mesh(sideWindowGeometry, glassMaterial);
     leftCabWindow.position.set(-0.71, 1.44, 0.78);
+    leftCabWindow.rotation.x = -0.08;
     const rightCabWindow = new Mesh(sideWindowGeometry.clone(), glassMaterial);
     rightCabWindow.position.set(0.71, 1.44, 0.78);
+    rightCabWindow.rotation.x = -0.08;
+    const steeringWheel = new Mesh(steeringWheelGeometry, darkMaterial);
+    steeringWheel.position.set(-0.3, 1.32, 0.9);
+    steeringWheel.rotation.x = -0.3;
+    const seatBase = new Mesh(seatBaseGeometry, darkMaterial);
+    seatBase.position.set(-0.3, 1.22, 0.62);
+    const seatBack = new Mesh(seatBackGeometry, darkMaterial);
+    seatBack.position.set(-0.3, 1.42, 0.44);
     const grille = new Mesh(grilleGeometry, darkMaterial);
     grille.position.set(0, 0.94, 1.34);
     const bedFloor = new Mesh(bedFloorGeometry, accentMaterial);
@@ -217,7 +284,7 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
 
     car.add(chassis, cab, cabRoof, windshield, leftCabWindow, rightCabWindow,
       grille, bedFloor, bedLeftWall, bedRightWall, bedBackWall, bedFrontWall,
-      exhaustPipe, frontBumper, rearBumper);
+      exhaustPipe, frontBumper, rearBumper, steeringWheel, seatBase, seatBack);
 
     for (const stripeZ of [0.18, -1.32]) {
       const bedStripe = new Mesh(bedStripeGeometry, paintMaterial);
@@ -225,32 +292,100 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
       car.add(bedStripe);
     }
 
+    for (const [x, z] of wheelPositions) {
+      const arch = createWheelArch();
+      arch.position.set(x!, 0.37, z!);
+      car.add(arch);
+    }
+
     faceEyeY = 1.42;
     faceSmileY = 1.28;
     headlightY = 0.76;
     taillightY = 0.98;
   } else {
-    const lowerGeometry = new RoundedBoxGeometry(1.42, 0.59, 2.62, 4, 0.19);
-    const upperGeometry = new RoundedBoxGeometry(1.3, 0.51, 2.28, 4, 0.18);
-    const cabinGeometry = new RoundedBoxGeometry(1.16, 0.5, 1.24, 3, 0.14);
+    const lowerGeometry = new RoundedBoxGeometry(1.42, 0.55, 2.62, 4, 0.19);
+    const hoodGeometry = new RoundedBoxGeometry(1.34, 0.34, 0.72, 3, 0.12);
+    const cabinBaseGeometry = new RoundedBoxGeometry(1.3, 0.42, 1.26, 3, 0.11);
+    const cabinRoofGeometry = new RoundedBoxGeometry(1.26, 0.14, 1.18, 3, 0.055);
+    const cabinPillarFrontLeftGeometry = new RoundedBoxGeometry(0.09, 0.42, 0.08, 2, 0.03);
+    const cabinPillarRearLeftGeometry = new RoundedBoxGeometry(0.09, 0.38, 0.08, 2, 0.03);
+    const trunkLidGeometry = new RoundedBoxGeometry(1.36, 0.22, 0.56, 3, 0.09);
     const rockerGeometry = new RoundedBoxGeometry(1.47, 0.13, 2.36, 2, 0.05);
     const sedanDoorLineGeometry = new BoxGeometry(0.02, 0.54, 0.025);
     const mirrorArmGeometry = new BoxGeometry(0.14, 0.05, 0.05);
     const mirrorHeadGeometry = new RoundedBoxGeometry(0.07, 0.15, 0.12, 2, 0.03);
+    const windshieldGlassGeometry = new BoxGeometry(1.06, 0.44, 0.055);
+    const rearGlassGeometry = new BoxGeometry(1.04, 0.4, 0.055);
+    const sideGlassGeometry = new BoxGeometry(0.04, 0.32, 0.92);
+    const steeringWheelGeometry = new TorusGeometry(0.1, 0.024, 10, 20);
+    const seatBaseGeometry = new RoundedBoxGeometry(0.66, 0.22, 0.38, 2, 0.07);
+    const seatBackGeometry = new RoundedBoxGeometry(0.66, 0.34, 0.11, 2, 0.05);
 
     const lower = new Mesh(lowerGeometry, paintMaterial);
     lower.position.y = 0.66;
-    const upper = new Mesh(upperGeometry, paintMaterial);
-    upper.position.set(0, 1.12, -0.08);
-    upper.scale.set(0.96, 1, 0.9);
-    const cabin = new Mesh(cabinGeometry, glassMaterial);
-    cabin.position.set(0, 1.24, -0.06);
-    const roof = new Mesh(upperGeometry, accentMaterial);
-    roof.position.set(0, 1.5, -0.08);
-    roof.scale.set(0.82, 0.18, 0.74);
+    const hood = new Mesh(hoodGeometry, paintMaterial);
+    hood.position.set(0, 1.11, 0.86);
+    const cabinBase = new Mesh(cabinBaseGeometry, paintMaterial);
+    cabinBase.position.set(0, 1.13, -0.12);
+    const cabinRoof = new Mesh(cabinRoofGeometry, accentMaterial);
+    cabinRoof.position.set(0, 1.58, -0.12);
+
+    // Windshield: angled forward glass panel
+    const windshield = new Mesh(windshieldGlassGeometry, glassMaterial);
+    windshield.position.set(0, 1.36, 0.48);
+    windshield.rotation.x = -0.42;
+
+    // Rear window: angled backward glass
+    const rearWindow = new Mesh(rearGlassGeometry, glassMaterial);
+    rearWindow.position.set(0, 1.36, -0.7);
+    rearWindow.rotation.x = 0.42;
+
+    // Side windows (front and rear door)
+    for (const sideX of [-0.63, 0.63]) {
+      const sideGlass = new Mesh(sideGlassGeometry, glassMaterial);
+      sideGlass.position.set(sideX!, 1.36, -0.12);
+      car.add(sideGlass);
+    }
+
+    // A-pillars
+    for (const sideX of [-0.6, 0.6]) {
+      const pillar = new Mesh(cabinPillarFrontLeftGeometry, paintMaterial);
+      pillar.position.set(sideX!, 1.36, 0.52);
+      pillar.rotation.x = -0.42;
+      car.add(pillar);
+    }
+    // C-pillars
+    for (const sideX of [-0.6, 0.6]) {
+      const pillar = new Mesh(cabinPillarRearLeftGeometry, paintMaterial);
+      pillar.position.set(sideX!, 1.36, -0.74);
+      pillar.rotation.x = 0.42;
+      car.add(pillar);
+    }
+
+    // Trunk lid step behind cabin
+    const trunkLid = new Mesh(trunkLidGeometry, paintMaterial);
+    trunkLid.position.set(0, 1.09, -1.02);
+
+    // Interior hints visible through glass
+    const steeringWheel = new Mesh(steeringWheelGeometry, darkMaterial);
+    steeringWheel.position.set(-0.28, 1.3, 0.28);
+    steeringWheel.rotation.x = -0.3;
+    const seatBase = new Mesh(seatBaseGeometry, darkMaterial);
+    seatBase.position.set(-0.28, 1.18, 0.02);
+    const seatBack = new Mesh(seatBackGeometry, darkMaterial);
+    seatBack.position.set(-0.28, 1.36, -0.16);
+
     const rocker = new Mesh(rockerGeometry, darkMaterial);
     rocker.position.set(0, 0.45, -0.03);
-    car.add(lower, upper, cabin, roof, rocker);
+    car.add(lower, hood, cabinBase, cabinRoof, windshield, rearWindow, trunkLid,
+      steeringWheel, seatBase, seatBack, rocker);
+
+    // Fender arches over all four wheels
+    for (const [x, z] of wheelPositions) {
+      const arch = createWheelArch();
+      arch.position.set(x!, 0.37, z!);
+      car.add(arch);
+    }
 
     for (const sideX of [-0.72, 0.72]) {
       for (const lineZ of [0.56, -0.62]) {

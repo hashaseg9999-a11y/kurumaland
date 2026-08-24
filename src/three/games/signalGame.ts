@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createEmergencyVehicle, pickRandomEmergencyType } from '../emergencyVehicles';
 import type { GameContext, GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 export class SignalGame implements GameModule {
   readonly id = 'signal';
@@ -26,12 +26,24 @@ export class SignalGame implements GameModule {
   private resetAt = Number.POSITIVE_INFINITY;
   private nextSirenAt = 0;
   private vehicleLabel = '';
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
+  private tireMarks: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
+  private readonly tireMarkGeometry = new THREE.PlaneGeometry(0.16, 0.52);
+  private tireMarkTimer = 0;
+  private currentSpeed = 0;
+  private signalFlash?: THREE.PointLight;
+  private readonly signalFlashColor = new THREE.Color('#ffffff');
+  private signalFlashUntil = 0;
+  private readonly tmpVector = new THREE.Vector3();
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'しんごうで GO!');
     this.hud.setProgress(0, 1);
     context.world.setCameraPreset('drive');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     this.createRandomVehicle();
     this.buildTrafficLight();
     this.cleanup.push(
@@ -47,9 +59,22 @@ export class SignalGame implements GameModule {
   unmount(): void {
     for (const off of this.cleanup) off();
     this.hud?.dispose();
+    this.clearTireMarks();
+    this.tireMarkGeometry.dispose();
+    if (this.signalFlash) removeAndDispose(this.signalFlash);
+    this.signalFlash = undefined;
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     this.cleanup = [];
     if (this.car) removeAndDispose(this.car);
     this.context = null;
+  }
+
+  private clearTireMarks(): void {
+    for (const mark of this.tireMarks) removeAndDispose(mark);
+    this.tireMarks = [];
   }
 
   private buildTrafficLight(): void {
@@ -77,6 +102,10 @@ export class SignalGame implements GameModule {
     smallLamp.position.set(3.2, 2.65, -3.76);
     this.greenLamp = smallLamp;
     this.context.world.add(smallLamp);
+    const flash = new THREE.PointLight('#ffffff', 0, 9, 1.8);
+    flash.position.set(3.2, 3.5, -3.4);
+    this.signalFlash = flash;
+    this.context.world.add(flash);
   }
 
   private createRandomVehicle(): void {
@@ -117,6 +146,15 @@ export class SignalGame implements GameModule {
     this.greenLamp.material.emissiveIntensity = this.isGo ? 1 : 0.06;
     this.context.sfx(this.isGo ? 'chime' : 'horn');
     this.context.speak(this.isGo ? `あお！ ${this.vehicleLabel}、ごー！` : 'あか！ とまれ！');
+    if (this.isGo) {
+      this.currentSpeed = 2.4;
+      this.lamp.getWorldPosition(this.tmpVector);
+      this.tmpVector.y += 0.35;
+      this.particles?.burst({ x: this.tmpVector.x, y: this.tmpVector.y, z: this.tmpVector.z }, { count: 10 });
+    }
+    const flashColor = this.isGo ? '#00e676' : '#ff5252';
+    this.signalFlashColor.set(flashColor);
+    this.signalFlashUntil = performance.now() + 420;
     if (this.isGo && this.beacon) {
       // Start the looping siren from update() while the beacon rotates.
       this.nextSirenAt = performance.now();
@@ -127,12 +165,18 @@ export class SignalGame implements GameModule {
   private update(delta: number): void {
     if (!this.context || !this.greenLamp) return;
     const time = performance.now() / 1000;
+    if (this.signalFlash) {
+      this.signalFlash.color.copy(this.signalFlashColor);
+      const remaining = this.signalFlashUntil - performance.now();
+      this.signalFlash.intensity = remaining > 0 ? (remaining / 420) * 4.2 : 0;
+    }
     if (time >= this.resetAt) {
       this.reset();
       return;
     }
     if (this.isGo) {
-      const speed = 6.2;
+      this.currentSpeed = Math.min(6.2, this.currentSpeed + delta * 4.6);
+      const speed = this.currentSpeed;
       const move = speed * delta;
       const car = this.car;
       if (!car) return;
@@ -149,6 +193,11 @@ export class SignalGame implements GameModule {
         this.nextSirenAt = now + (this.vehicleLabel === 'パトカー' ? 620 : 740);
       }
       car.rotation.y = Math.PI + Math.sin(time * 9) * 0.025;
+      this.tireMarkTimer -= delta;
+      if (this.tireMarkTimer <= 0) {
+        this.tireMarkTimer = 0.085;
+        this.spawnTireMarks(car);
+      }
       if (this.beacon) {
         this.beaconPulse += delta * 9;
         const pulse = (Math.sin(this.beaconPulse) + 1) / 2;
@@ -180,7 +229,34 @@ export class SignalGame implements GameModule {
         this.context.speak('よくできたね！');
         this.hud?.setProgress(1, 1);
         this.hud?.celebrate('すごい！');
+        car.getWorldPosition(this.tmpVector);
+        this.tmpVector.y += 1;
+        this.particles?.burst({ x: this.tmpVector.x, y: this.tmpVector.y, z: this.tmpVector.z }, { count: 20 });
+        this.cameraPulse?.trigger();
       }
+    }
+    this.particles?.update(delta);
+    this.cameraPulse?.update(delta);
+  }
+
+  private spawnTireMarks(car: THREE.Group): void {
+    if (!this.context) return;
+    for (const side of [-0.44, 0.44]) {
+      const material = new THREE.MeshBasicMaterial({
+        color: '#37474f',
+        transparent: true,
+        opacity: 0.26,
+        depthWrite: false,
+      });
+      const mark = new THREE.Mesh(this.tireMarkGeometry, material);
+      mark.rotation.x = -Math.PI / 2;
+      mark.position.set(car.position.x + side, 0.02, car.position.z + 1.08);
+      this.context.world.scene.add(mark);
+      this.tireMarks.push(mark);
+    }
+    while (this.tireMarks.length > 34) {
+      const oldest = this.tireMarks.shift();
+      if (oldest) removeAndDispose(oldest);
     }
   }
 
@@ -188,6 +264,9 @@ export class SignalGame implements GameModule {
     this.resetAt = Number.POSITIVE_INFINITY;
     this.hud?.setProgress(0, 1);
     this.distance = 0;
+    this.currentSpeed = 0;
+    this.tireMarkTimer = 0;
+    this.signalFlashUntil = 0;
     if (this.car) {
     this.car.position.set(-1.6, 0, 7);
       this.car.rotation.y = Math.PI;
