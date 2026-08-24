@@ -1,19 +1,15 @@
 import * as THREE from 'three';
-import { createCar } from '../cars';
+import { CAR_COLORS, createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { createGameHud } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LABELS: Record<CarColorName, string> = { red: 'あか', blue: 'あお', yellow: 'きいろ', green: 'みどり' };
-const GARAGE_COLORS: Record<CarColorName, string> = {
-  red: '#ef5350',
-  blue: '#42a5f5',
-  yellow: '#ffca28',
-  green: '#66bb6a',
-};
+const GARAGE_COLORS = CAR_COLORS;
 const LANES: Record<CarColorName, number> = { red: -4.5, blue: -1.5, yellow: 1.5, green: 4.5 };
 const TARGET_Z = -5;
-const START_Z = 7.5;
+const START_Z = 2.8;
 
 interface DraggableCar {
   group: THREE.Group;
@@ -21,20 +17,33 @@ interface DraggableCar {
   homeZ: number;
   dragging: boolean;
   parked?: boolean;
+  rejectUntil?: number;
   lastEvent?: PointerEvent;
+}
+
+interface GarageVisual {
+  color: CarColorName;
+  group: THREE.Group;
+  material: THREE.MeshStandardMaterial;
+  bounceUntil?: number;
 }
 
 export class ColorGarageGame implements GameModule {
   readonly id = 'color-garage';
   private context: GameContext | null = null;
+  private hud: ReturnType<typeof createGameHud> | null = null;
   private cleanup: Array<() => void> = [];
   private cars: DraggableCar[] = [];
   private dragged: DraggableCar | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private resetTimer?: number;
+  private garages: GarageVisual[] = [];
 
   mount(context: GameContext): void {
     this.context = context;
+    this.hud = createGameHud(context, 'いろの しゃこ');
+    this.hud.setProgress(0, 4);
     context.world.setCameraPreset('garage');
     for (const color of COLORS) this.buildGarage(color);
     for (const [index, color] of COLORS.entries()) {
@@ -51,24 +60,38 @@ export class ColorGarageGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
+    this.hud?.dispose();
+    if (this.resetTimer) window.clearTimeout(this.resetTimer);
     for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
+    for (const garage of this.garages) removeAndDispose(garage.group);
+    this.garages = [];
     this.cleanup = [];
     this.context = null;
   }
 
   private buildGarage(color: CarColorName): void {
     if (!this.context) return;
+    const visual = new THREE.Group();
+    visual.position.set(LANES[color]!, 0, TARGET_Z);
     const geometry = new THREE.BoxGeometry(2.3, 2.3, 2.8);
-    const material = new THREE.MeshStandardMaterial({ color: GARAGE_COLORS[color]!, transparent: true, opacity: 0.32 });
-    const garage = new THREE.Mesh(geometry, material);
-    garage.position.set(LANES[color]!, 1.15, TARGET_Z);
+    const material = new THREE.MeshStandardMaterial({
+      color: GARAGE_COLORS[color]!,
+      emissive: GARAGE_COLORS[color],
+      emissiveIntensity: 0,
+      transparent: true,
+      opacity: 0.32,
+    });
+    const garageBody = new THREE.Mesh(geometry, material);
+    garageBody.position.y = 1.15;
     const roofGeometry = new THREE.CylinderGeometry(1.15, 1.15, 2.3, 24, 1, false, 0, Math.PI);
     const roofMaterial = new THREE.MeshStandardMaterial({ color: GARAGE_COLORS[color]!, roughness: 0.35 });
     const roof = new THREE.Mesh(roofGeometry, roofMaterial);
     roof.rotation.z = Math.PI / 2;
-    roof.position.set(LANES[color]!, 2.3, TARGET_Z);
-    this.context.world.add(garage, roof);
+    roof.position.y = 2.3;
+    visual.add(garageBody, roof);
+    this.context.world.add(visual);
+    this.garages.push({ color, group: visual, material });
   }
 
   private startDrag(event: PointerEvent, raycaster: THREE.Raycaster): void {
@@ -80,11 +103,12 @@ export class ColorGarageGame implements GameModule {
       selected = selected.parent!;
     }
     const found = this.cars.find((car) => car.group === selected);
-    if (!found || found.parked || found.color !== this.currentTarget()) return;
+    if (!found || found.parked) return;
     this.dragged = found;
     this.pointerId = event.pointerId;
     found.dragging = true;
     found.lastEvent = event;
+    try { this.context.world.renderer.domElement.setPointerCapture(event.pointerId); } catch {}
     this.attachMoveAndRelease();
     this.context.sfx('pop');
   }
@@ -106,14 +130,28 @@ export class ColorGarageGame implements GameModule {
     const release = (): void => {
       const item = this.dragged;
       if (!this.context || !item) return;
-      const near = Math.abs(item.group.position.x - LANES[item.color]!) < 1.55 && Math.abs(item.group.position.z - TARGET_Z) < 2.15;
-      if (near) {
+      const nearAnyGarage = Object.values(LANES).some((lane) => Math.abs(item.group.position.x - lane) < 1.55)
+        && Math.abs(item.group.position.z - TARGET_Z) < 2.15;
+      const nearCorrectGarage = Math.abs(item.group.position.x - LANES[item.color]!) < 1.55
+        && Math.abs(item.group.position.z - TARGET_Z) < 2.15;
+      if (nearCorrectGarage) {
         item.parked = true;
         item.group.position.set(LANES[item.color]!, 0, TARGET_Z + 0.25);
+        item.rejectUntil = undefined;
+        const garage = this.garages.find((visual) => visual.color === item.color);
+        if (garage) garage.bounceUntil = performance.now() + 480;
         this.context.sfx('chime');
         this.context.speak(`${LABELS[item.color]}！`);
         this.context.complete();
-        if (this.cars.every((car) => car.parked)) window.setTimeout(() => this.reset(), 900);
+        this.hud?.setProgress(this.cars.filter((car) => car.parked).length, 4);
+        if (this.cars.every((car) => car.parked)) {
+          this.hud?.celebrate('できた！');
+          this.resetTimer = window.setTimeout(() => this.reset(), 1200);
+        }
+      } else if (nearAnyGarage) {
+        item.rejectUntil = performance.now() + 520;
+        this.context.sfx('softNo');
+        item.group.position.z = item.homeZ;
       } else {
         item.group.position.z = item.homeZ;
       }
@@ -124,11 +162,13 @@ export class ColorGarageGame implements GameModule {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
+      canvas.removeEventListener('lostpointercapture', release);
       this.moveAttached = false;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('lostpointercapture', release);
   }
 
   private updateDragFromPointer(): void {
@@ -148,16 +188,37 @@ export class ColorGarageGame implements GameModule {
 
   private update(): void {
     const time = performance.now() / 1000;
+    const targetColor = this.currentTarget();
+    const pulse = THREE.MathUtils.clamp(0.12 + Math.sin(time * 2) * 0.165, 0.12, 0.45);
+    const now = performance.now();
+    for (const garage of this.garages) {
+      if (garage.bounceUntil !== undefined && now < garage.bounceUntil) {
+        const progress = 1 - (garage.bounceUntil - now) / 480;
+        garage.group.scale.y = 1 + Math.sin(progress * Math.PI) * 0.08;
+      } else {
+        garage.group.scale.y = 1;
+        garage.bounceUntil = undefined;
+      }
+      garage.material.emissiveIntensity = garage.color === targetColor ? pulse : 0.12;
+    }
     for (const car of this.cars) {
-      if (!car.dragging) continue;
-      car.group.rotation.z = Math.sin(time * 10) * 0.045;
+      if (car.dragging) {
+        car.group.rotation.z = Math.sin(time * 10) * 0.045;
+      } else if (car.rejectUntil && performance.now() < car.rejectUntil) {
+        car.group.rotation.z = Math.sin(time * 24) * 0.07;
+      } else {
+        car.group.rotation.z = 0;
+      }
     }
   }
 
   private reset(): void {
+    if (!this.context) return;
+    this.resetTimer = undefined;
+    this.hud?.setProgress(0, 4);
     for (const car of this.cars) {
       car.parked = false;
-      car.group.position.set(LANES[car.color]!, 0, START_Z + Math.random() * 3);
+      car.group.position.set(LANES[car.color]!, 0, START_Z + Math.random() * 1.4);
     }
   }
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { createGameHud } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LANES: Record<CarColorName, [number, number]> = {
@@ -17,21 +18,35 @@ interface SizedCar {
   big: boolean;
   dragging: boolean;
   parked?: boolean;
+  rejectUntil?: number;
   lastEvent?: PointerEvent;
+}
+
+interface SlotVisual {
+  group: THREE.Group;
+  big: boolean;
+  material: THREE.MeshStandardMaterial;
+  labelTexture: THREE.CanvasTexture;
+  bounceUntil?: number;
 }
 
 export class BigSmallGame implements GameModule {
   readonly id = 'big-small';
   private context: GameContext | null = null;
+  private hud: ReturnType<typeof createGameHud> | null = null;
   private cleanup: Array<() => void> = [];
   private cars: SizedCar[] = [];
   private dragged: SizedCar | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private resetTimer?: number;
+  private slots: SlotVisual[] = [];
 
   mount(context: GameContext): void {
     this.context = context;
-    context.world.setCameraPreset('garage');
+    this.hud = createGameHud(context, 'おおきい・ちいさい');
+    this.hud.setProgress(0, 8);
+    context.world.setCameraPreset('size');
     for (const color of COLORS) this.buildSlots(color);
     for (const color of COLORS) this.buildPair(color);
     this.cleanup.push(
@@ -42,8 +57,15 @@ export class BigSmallGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
+    this.hud?.dispose();
+    if (this.resetTimer) window.clearTimeout(this.resetTimer);
+    for (const slot of this.slots) {
+      removeAndDispose(slot.group);
+      slot.labelTexture.dispose();
+    }
     for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
+    this.slots = [];
     this.cleanup = [];
     this.context = null;
   }
@@ -53,21 +75,69 @@ export class BigSmallGame implements GameModule {
     const positions = LANES[color]!;
     for (const [index, x] of positions.entries()) {
       const big = index === 0;
+      const visual = new THREE.Group();
       const geometry = new THREE.BoxGeometry(big ? 3.5 : 2.4, 0.12, big ? 5.0 : 3.6);
-      const material = new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.55 });
+      const material = new THREE.MeshStandardMaterial({
+        color: '#ffffff',
+        emissive: '#ffffff',
+        emissiveIntensity: 0,
+        transparent: true,
+        opacity: 0.55,
+      });
       const frame = new THREE.Mesh(geometry, material);
-      frame.position.set(x!, 0.02, -3.5);
-      this.context.world.add(frame);
+      frame.position.set(0, 0.02, -3.5);
+      const edgeGeometry = new THREE.BoxGeometry(big ? 3.7 : 2.6, 0.16, big ? 5.2 : 3.8);
+      const edgeMaterial = new THREE.MeshBasicMaterial({ color: big ? '#ffd54f' : '#81d4fa', transparent: true, opacity: 0.24 });
+      const coloredEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+      coloredEdge.position.set(0, 0.01, -3.5);
+      const label = this.createSlotLabel(big ? 'おおきい' : 'ちいさい', big ? '#e65100' : '#01579b');
+      label.mesh.position.set(0, 1.15, big ? -6.35 : -5.45);
+      visual.add(coloredEdge, frame, label.mesh);
+      visual.position.x = x!;
+      this.context.world.add(visual);
+      this.slots.push({ group: visual, big, material, labelTexture: label.texture });
     }
+  }
+
+  private createSlotLabel(text: string, color: string): { mesh: THREE.Mesh; texture: THREE.CanvasTexture } {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 160;
+    const drawingContext = canvas.getContext('2d');
+    if (!drawingContext) throw new Error('2D context is unavailable');
+    drawingContext.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    drawingContext.fillRect(16, 20, 480, 120);
+    drawingContext.strokeStyle = color;
+    drawingContext.lineWidth = 10;
+    drawingContext.strokeRect(16, 20, 480, 120);
+    drawingContext.fillStyle = color;
+    drawingContext.font = 'bold 76px sans-serif';
+    drawingContext.textAlign = 'center';
+    drawingContext.textBaseline = 'middle';
+    drawingContext.fillText(text, 256, 86);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = Math.min(4, this.context?.world.renderer.capabilities.getMaxAnisotropy() ?? 1);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const geometry = new THREE.PlaneGeometry(2.9, 0.91);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = -Math.PI / 6;
+    return { mesh, texture };
   }
 
   private buildPair(color: CarColorName): void {
     if (!this.context) return;
     const bigCar = createCar(color, 1.45);
     const smallCar = createCar(color, 0.78);
-    const z = 6 + Math.random() * 3;
+    const z = 1.6 + Math.random() * 1.4;
     bigCar.position.set(-4.8 + Math.random() * 2, 0, z);
-    smallCar.position.set(2.7 + Math.random() * 2, 0, z + Math.random() * 1.5);
+    smallCar.position.set(2.7 + Math.random() * 2, 0, z + 0.8);
     bigCar.rotation.y = Math.PI;
     smallCar.rotation.y = Math.PI;
     this.context.world.add(bigCar, smallCar);
@@ -89,6 +159,7 @@ export class BigSmallGame implements GameModule {
     this.pointerId = event.pointerId;
     found.dragging = true;
     found.lastEvent = event;
+    try { this.context.world.renderer.domElement.setPointerCapture(event.pointerId); } catch {}
     this.attachMoveAndRelease();
     this.context.sfx('pop');
   }
@@ -110,12 +181,21 @@ export class BigSmallGame implements GameModule {
         item.parked = true;
         item.group.position.set(slotX, 0, -3.5);
         item.group.rotation.y = 0;
+        item.rejectUntil = undefined;
+        const slot = this.slots.find((entry) => entry.big === item.big);
+        if (slot) slot.bounceUntil = performance.now() + 480;
         this.context.sfx('chime');
         this.context.speak(item.big ? 'おおきい！' : 'ちいさい！');
         this.context.complete();
-        if (!this.cars.some((car) => !car.parked)) window.setTimeout(() => this.reset(), 900);
+        this.hud?.setProgress(this.cars.filter((car) => car.parked).length, 8);
+        if (!this.cars.some((car) => !car.parked)) {
+          this.hud?.celebrate('できた！');
+          this.resetTimer = window.setTimeout(() => this.reset(), 1200);
+        }
       } else {
-        item.group.position.z = 6 + Math.random() * 3;
+        if (item.group.position.z < -0.5) this.context.sfx('softNo');
+        item.rejectUntil = performance.now() + 420;
+        item.group.position.z = 1.6 + Math.random() * 1.4;
         item.lastEvent = undefined;
       }
       item.dragging = false;
@@ -124,11 +204,13 @@ export class BigSmallGame implements GameModule {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
+      canvas.removeEventListener('lostpointercapture', release);
       this.moveAttached = false;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('lostpointercapture', release);
   }
 
   private updateDrag(): void {
@@ -136,7 +218,7 @@ export class BigSmallGame implements GameModule {
     if (!item?.lastEvent || !this.context) return;
     const point = this.screenToGround(item.lastEvent);
     if (!point) return;
-    item.group.position.set(THREE.MathUtils.clamp(point.x, -6.5, 6.5), 0, THREE.MathUtils.clamp(point.z, -4.2, 10));
+    item.group.position.set(THREE.MathUtils.clamp(point.x, -6.5, 6.5), 0, THREE.MathUtils.clamp(point.z, -4.2, 4.2));
   }
 
   private screenToGround(event: PointerEvent): THREE.Vector3 | null {
@@ -155,16 +237,39 @@ export class BigSmallGame implements GameModule {
 
   private update(): void {
     const time = performance.now() / 1000;
+    const now = performance.now();
+    const targetBig = this.cars.find((car) => !car.parked)?.big;
+    for (const slot of this.slots) {
+      slot.material.emissiveIntensity = slot.big === targetBig
+        ? THREE.MathUtils.clamp(0.12 + Math.sin(time * 2.4) * 0.165, 0.12, 0.45)
+        : 0;
+      if (slot.bounceUntil !== undefined && now < slot.bounceUntil) {
+        const progress = 1 - (slot.bounceUntil - now) / 480;
+        slot.group.scale.y = 1 + Math.sin(progress * Math.PI) * 0.08;
+      } else {
+        slot.group.scale.y = 1;
+        slot.bounceUntil = undefined;
+      }
+    }
     for (const car of this.cars) {
-      if (car.dragging) car.group.rotation.z = Math.sin(time * 9) * 0.04;
+      if (car.dragging) {
+        car.group.rotation.z = Math.sin(time * 9) * 0.04;
+      } else if (car.rejectUntil && performance.now() < car.rejectUntil) {
+        car.group.rotation.z = Math.sin(time * 24) * 0.07;
+      } else {
+        car.group.rotation.z = 0;
+      }
     }
   }
 
   private reset(): void {
+    if (!this.context) return;
+    this.resetTimer = undefined;
+    this.hud?.setProgress(0, 8);
     for (const car of this.cars) {
       car.parked = false;
-      const z = 6 + Math.random() * 3;
-      car.group.position.set(car.big ? -4.8 + Math.random() * 2 : 2.7 + Math.random() * 2, 0, car.big ? z : z + 1.2);
+      const z = 1.6 + Math.random() * 1.4;
+      car.group.position.set(car.big ? -4.8 + Math.random() * 2 : 2.7 + Math.random() * 2, 0, car.big ? z : z + 0.8);
       car.group.rotation.y = Math.PI;
     }
   }

@@ -2,10 +2,12 @@ import * as THREE from 'three';
 import { createEmergencyVehicle, pickRandomEmergencyType } from '../emergencyVehicles';
 import type { GameContext, GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { createGameHud } from '../gameHud';
 
 export class SignalGame implements GameModule {
   readonly id = 'signal';
   private context: GameContext | null = null;
+  private hud: ReturnType<typeof createGameHud> | null = null;
   private cleanup: Array<() => void> = [];
   private car!: THREE.Group;
   private beacon?: THREE.PointLight;
@@ -14,6 +16,7 @@ export class SignalGame implements GameModule {
   private beaconColors: [string, string] = ['#ff1744', '#2979ff'];
   private beaconPulse = 0;
   private lamp!: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>;
+  private signalHit?: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
   private greenLamp?: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>;
   private isGo = false;
   private distance = 0;
@@ -23,12 +26,14 @@ export class SignalGame implements GameModule {
 
   mount(context: GameContext): void {
     this.context = context;
+    this.hud = createGameHud(context, 'しんごうで GO!');
+    this.hud.setProgress(0, 1);
     context.world.setCameraPreset('drive');
     this.createRandomVehicle();
     this.buildTrafficLight();
     this.cleanup.push(
       context.world.onPointerDown((_event, raycaster) => {
-        if (raycaster.intersectObject(this.lamp, true).length) {
+        if (this.signalHit && raycaster.intersectObject(this.signalHit, false).length) {
           this.toggleSignal();
         }
       }),
@@ -38,6 +43,7 @@ export class SignalGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
+    this.hud?.dispose();
     this.cleanup = [];
     if (this.car) removeAndDispose(this.car);
     this.context = null;
@@ -58,6 +64,11 @@ export class SignalGame implements GameModule {
     this.lamp.rotation.x = Math.PI / 2;
     this.lamp.position.set(3.2, 3.95, -3.76);
     this.context.world.add(pole, box, this.lamp);
+    const hitGeometry = new THREE.BoxGeometry(1.35, 3.7, 1.25);
+    const hitMaterial = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0, depthWrite: false });
+    this.signalHit = new THREE.Mesh(hitGeometry, hitMaterial);
+    this.signalHit.position.set(3.2, 2.35, -4);
+    this.context.world.add(this.signalHit);
     const smallLamp = new THREE.Mesh(lensGeometry, new THREE.MeshStandardMaterial({ color: '#4caf50', emissive: '#43a047', emissiveIntensity: 0.06 }));
     smallLamp.rotation.x = Math.PI / 2;
     smallLamp.position.set(3.2, 2.65, -3.76);
@@ -67,9 +78,9 @@ export class SignalGame implements GameModule {
 
   private createRandomVehicle(): void {
     if (!this.context) return;
+    if (this.car) removeAndDispose(this.car);
     const type = pickRandomEmergencyType();
     const vehicle = createEmergencyVehicle(type);
-    const previousCar = this.car;
     this.car = vehicle.group;
     this.beacon = vehicle.beacon;
     this.leftLamp = vehicle.leftLamp;
@@ -80,7 +91,6 @@ export class SignalGame implements GameModule {
     this.car.rotation.y = Math.PI;
     this.context.world.setCameraPreset('drive');
     this.context.world.add(this.car);
-    if (previousCar) window.setTimeout(() => removeAndDispose(previousCar), 80);
   }
 
   private toggleSignal(): void {
@@ -139,12 +149,15 @@ export class SignalGame implements GameModule {
         this.toggleSignal();
         this.context.complete();
         this.context.speak('よくできたね！');
+        this.hud?.setProgress(1, 1);
+        this.hud?.celebrate('すごい！');
       }
     }
   }
 
   private reset(): void {
     this.resetAt = Number.POSITIVE_INFINITY;
+    this.hud?.setProgress(0, 1);
     this.distance = 0;
     this.car.position.set(-2.6, 0, 7);
     this.car.rotation.y = Math.PI;

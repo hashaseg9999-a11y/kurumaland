@@ -2,9 +2,11 @@ import type * as THREE from 'three';
 
 export type CarColorName = 'red' | 'blue' | 'yellow' | 'green';
 export type EmergencyVehicleType = 'fire-truck' | 'ambulance' | 'police-car';
+export type CameraPresetName = 'drive' | 'garage' | 'size' | 'pool' | 'train';
 export type GameSfxName =
   | 'chime'
   | 'pop'
+  | 'softNo'
   | 'horn'
   | 'sparkle'
   | 'siren'
@@ -37,9 +39,10 @@ export interface World3D {
   readonly renderer: THREE.WebGLRenderer;
   readonly roadCenterZ: number;
   add(...objects: THREE.Object3D[]): void;
+  clearGameObjects(): void;
   onUpdate(handler: FrameHandler): () => void;
   onPointerDown(handler: PointerRayHandler): () => void;
-  setCameraPreset(preset: 'drive' | 'garage' | 'pool'): void;
+  setCameraPreset(preset: CameraPresetName): void;
   resizeToContainer(): void;
   dispose(): void;
 }

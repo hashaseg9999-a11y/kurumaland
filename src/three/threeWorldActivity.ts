@@ -12,6 +12,7 @@ type ActivitySfxName = GameSfxName;
 const ACTIVITY_SFX_MAP: Record<ActivitySfxName, SfxName> = {
   chime: 'chime',
   pop: 'pop',
+  softNo: 'tick',
   horn: 'horn',
   sparkle: 'sparkle',
   siren: 'siren',
@@ -76,6 +77,9 @@ export class ThreeWorldActivity implements Activity {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `three-world__tab`;
+      button.dataset.gameId = game.id;
+      button.setAttribute('aria-current', 'false');
+      button.setAttribute('aria-selected', 'false');
       button.textContent = THREE_GAME_LABELS[game.id] ?? game.id;
       button.setAttribute('aria-label', button.textContent ?? '');
       button.addEventListener('click', () => this.openGame(game), { signal: this.listeners.signal });
@@ -101,7 +105,11 @@ export class ThreeWorldActivity implements Activity {
 
   private openGame(game: GameModule): void {
     if (!this.world || !this.overlay || !this.contextServices) return;
-    this.activeGame?.unmount();
+    this.overlay.querySelectorAll('[data-three-game-ui]').forEach((node) => node.remove());
+    if (this.activeGame) {
+      this.activeGame.unmount();
+      this.world.clearGameObjects();
+    }
     this.activeGame = null;
     if (this.hint) {
       this.hint.textContent = THREE_GAME_INSTRUCTIONS[game.id] ?? THREE_GAME_LABELS[game.id] ?? game.id;
@@ -115,7 +123,12 @@ export class ThreeWorldActivity implements Activity {
     };
     this.activeGame = game;
     game.mount(context);
-    for (const button of this.gameButtons) button.classList.toggle('is-active', button.textContent === (THREE_GAME_LABELS[game.id] ?? game.id));
+    for (const button of this.gameButtons) {
+      const isActive = button.dataset.gameId === game.id;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-current', isActive ? 'true' : 'false');
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
   }
 
   private speakText(textValue: string): void {

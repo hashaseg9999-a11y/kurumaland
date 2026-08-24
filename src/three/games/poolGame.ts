@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { createGameHud } from '../gameHud';
 
 interface Ball3D {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -9,15 +10,19 @@ interface Ball3D {
   dragging: boolean;
   lastEvent?: PointerEvent;
 }
-
 const GRAVITY = 13;
 const BONUS_DISTANCE = 5.2;
 const BONUS_DURATION_MS = 2600;
 const BALL_COLORS = ['#ef5350', '#42a5f5', '#ffca28', '#66bb6a', '#ab47bc', '#26c6da'];
+const POOL_MIN_X = -5.2;
+const POOL_MAX_X = 5.2;
+const POOL_MIN_Z = -7;
+const POOL_MAX_Z = 4.2;
 
 export class PoolGame implements GameModule {
   readonly id = 'ball-pool';
   private context: GameContext | null = null;
+  private hud: ReturnType<typeof createGameHud> | null = null;
   private cleanup: Array<() => void> = [];
   private balls: Ball3D[] = [];
   private dragged: Ball3D | null = null;
@@ -27,10 +32,14 @@ export class PoolGame implements GameModule {
   private bonusUntil = 0;
   private nextBonusPulseAt = 0;
   private bonusTimeout?: number;
+  private boundary?: THREE.Group;
 
   mount(context: GameContext): void {
     this.context = context;
+    this.hud = createGameHud(context, 'ぼーるぷーる');
+    this.hud.setProgress(0, 0);
     context.world.setCameraPreset('pool');
+    this.createBoundary();
     for (let i = 0; i < 10; i++) this.createBall(i);
     this.cleanup.push(
       context.world.onPointerDown((event, raycaster) => this.startDrag(event, raycaster)),
@@ -40,7 +49,10 @@ export class PoolGame implements GameModule {
 
   unmount(): void {
     for (const off of this.cleanup) off();
+    this.hud?.dispose();
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
+    if (this.boundary) removeAndDispose(this.boundary);
+    this.boundary = undefined;
     for (const ball of this.balls) removeAndDispose(ball.mesh);
     this.balls = [];
     this.cleanup = [];
@@ -54,9 +66,53 @@ export class PoolGame implements GameModule {
     const material = new THREE.MeshStandardMaterial({ color: BALL_COLORS[index % BALL_COLORS.length]!, roughness: 0.24 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
-    mesh.position.set(-4 + Math.random() * 8, radius + Math.random() * 4, -2 + Math.random() * 8);
+    mesh.position.set(-4 + Math.random() * 8, radius + Math.random() * 3, -3 + Math.random() * 6.2);
     this.context.world.add(mesh);
     this.balls.push({ mesh, velocity: new THREE.Vector3(), radius, dragging: false });
+  }
+
+  private createBoundary(): void {
+    if (!this.context) return;
+    const width = POOL_MAX_X - POOL_MIN_X;
+    const depth = POOL_MAX_Z - POOL_MIN_Z;
+    const centerZ = (POOL_MIN_Z + POOL_MAX_Z) / 2;
+    const boundary = new THREE.Group();
+
+    const outer = new THREE.Mesh(
+      new THREE.ShapeGeometry(this.createRoundedRectangle(width + 0.44, depth + 0.44, 0.72), 10),
+      new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.82 }),
+    );
+    outer.rotation.x = -Math.PI / 2;
+    outer.position.set(0, 0.02, centerZ);
+    outer.receiveShadow = true;
+
+    const inner = new THREE.Mesh(
+      new THREE.ShapeGeometry(this.createRoundedRectangle(width, depth, 0.58), 10),
+      new THREE.MeshStandardMaterial({ color: '#dff0ff', roughness: 0.92 }),
+    );
+    inner.rotation.x = -Math.PI / 2;
+    inner.position.set(0, 0.045, centerZ);
+    inner.receiveShadow = true;
+
+    boundary.add(outer, inner);
+    this.context.world.add(boundary);
+    this.boundary = boundary;
+  }
+
+  private createRoundedRectangle(width: number, depth: number, radius: number): THREE.Shape {
+    const shape = new THREE.Shape();
+    const halfWidth = width / 2;
+    const halfDepth = depth / 2;
+    shape.moveTo(-halfWidth + radius, -halfDepth);
+    shape.lineTo(halfWidth - radius, -halfDepth);
+    shape.quadraticCurveTo(halfWidth, -halfDepth, halfWidth, -halfDepth + radius);
+    shape.lineTo(halfWidth, halfDepth - radius);
+    shape.quadraticCurveTo(halfWidth, halfDepth, halfWidth - radius, halfDepth);
+    shape.lineTo(-halfWidth + radius, halfDepth);
+    shape.quadraticCurveTo(-halfWidth, halfDepth, -halfWidth, halfDepth - radius);
+    shape.lineTo(-halfWidth, -halfDepth + radius);
+    shape.quadraticCurveTo(-halfWidth, -halfDepth, -halfWidth + radius, -halfDepth);
+    return shape;
   }
 
   private startDrag(event: PointerEvent, raycaster: THREE.Raycaster): void {
@@ -105,11 +161,13 @@ export class PoolGame implements GameModule {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
+      canvas.removeEventListener('lostpointercapture', release);
       this.moveAttached = false;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('lostpointercapture', release);
   }
 
   private moveBallToPointer(ball: Ball3D, event: PointerEvent): void {
@@ -121,7 +179,7 @@ export class PoolGame implements GameModule {
     const direction = vector.sub(this.context.world.camera.position).normalize();
     const distance = -(this.context.world.camera.position.y - ball.radius) / direction.y;
     const point = this.context.world.camera.position.clone().add(direction.multiplyScalar(distance));
-    ball.mesh.position.set(THREE.MathUtils.clamp(point.x, -5.2, 5.2), Math.max(ball.radius, point.y), THREE.MathUtils.clamp(point.z, -7, 9));
+    ball.mesh.position.set(THREE.MathUtils.clamp(point.x, -5.2, 5.2), Math.max(ball.radius, point.y), THREE.MathUtils.clamp(point.z, -7, 4.2));
   }
 
   private triggerBonus(): void {
@@ -156,7 +214,7 @@ export class PoolGame implements GameModule {
           ball.mesh.position.x = Math.sign(ball.mesh.position.x) * 5.2;
           ball.velocity.x *= -0.72;
         }
-        if (ball.mesh.position.z > 9) { ball.mesh.position.z = 9; ball.velocity.z *= -0.72; }
+        if (ball.mesh.position.z > 4.2) { ball.mesh.position.z = 4.2; ball.velocity.z *= -0.72; }
         if (ball.mesh.position.z < -7) { ball.mesh.position.z = -7; ball.velocity.z *= -0.72; }
       }
     }
