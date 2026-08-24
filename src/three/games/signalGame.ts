@@ -9,8 +9,11 @@ export class SignalGame implements GameModule {
   private context: GameContext | null = null;
   private hud: ReturnType<typeof createGameHud> | null = null;
   private cleanup: Array<() => void> = [];
-  private car!: THREE.Group;
+  private car: THREE.Group | null = null;
   private beacon?: THREE.PointLight;
+  private beaconAssembly?: THREE.Group;
+  private wheels: THREE.Group[] = [];
+  private hoseReel?: THREE.Group;
   private leftLamp?: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>;
   private rightLamp?: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>;
   private beaconColors: [string, string] = ['#ff1744', '#2979ff'];
@@ -79,16 +82,28 @@ export class SignalGame implements GameModule {
   private createRandomVehicle(): void {
     if (!this.context) return;
     if (this.car) removeAndDispose(this.car);
+    this.car = null;
     const type = pickRandomEmergencyType();
     const vehicle = createEmergencyVehicle(type);
     this.car = vehicle.group;
     this.beacon = vehicle.beacon;
+    this.beaconAssembly = vehicle.beaconAssembly;
+    this.wheels = [];
+    this.hoseReel = undefined;
+    vehicle.group.traverse((child) => {
+      if (child instanceof THREE.Group && child.userData.isEmergencyWheel) {
+        this.wheels.push(child);
+      }
+      if (child instanceof THREE.Group && child.userData.animate === 'hose-reel') {
+        this.hoseReel = child;
+      }
+    });
     this.leftLamp = vehicle.leftLamp;
     this.rightLamp = vehicle.rightLamp;
     this.beaconColors = vehicle.beaconColors;
     this.vehicleLabel = type === 'fire-truck' ? 'しょうぼうしゃ' : type === 'ambulance' ? 'きゅうきゅうしゃ' : 'パトカー';
-    this.car.position.set(-2.6, 0, 7);
-    this.car.rotation.y = Math.PI;
+    this.car!.position.set(-2.6, 0, 7);
+    this.car!.rotation.y = Math.PI;
     this.context.world.setCameraPreset('drive');
     this.context.world.add(this.car);
   }
@@ -119,20 +134,26 @@ export class SignalGame implements GameModule {
     if (this.isGo) {
       const speed = 6.2;
       const move = speed * delta;
-      this.car.position.z -= move;
+      const car = this.car;
+      if (!car) return;
+      car.position.z -= move;
+      car.position.y = Math.sin(time * 13) * 0.022;
       this.distance += move;
-      this.context.world.camera.position.z = this.car.position.z + 2.5;
-      this.context.world.camera.lookAt(0, 1, this.car.position.z - 10);
+      this.context.world.camera.position.z = car.position.z + 2.5;
+      this.context.world.camera.lookAt(0, 1, car.position.z - 10);
       const now = performance.now();
       if (now >= this.nextSirenAt) {
         this.context.sfx(this.vehicleLabel === 'パトカー' ? 'policeSiren' : 'siren');
         this.nextSirenAt = now + (this.vehicleLabel === 'パトカー' ? 620 : 740);
       }
-      this.car.rotation.y = Math.PI + Math.sin(time * 9) * 0.025;
+      car.rotation.y = Math.PI + Math.sin(time * 9) * 0.025;
       if (this.beacon) {
         this.beaconPulse += delta * 9;
         const pulse = (Math.sin(this.beaconPulse) + 1) / 2;
         this.beacon.intensity = pulse * 3.4;
+        if (this.beaconAssembly) {
+          this.beaconAssembly.rotation.y += delta * 8.5;
+        }
         const leftPhase = Math.sin(this.beaconPulse) > 0 ? 1.6 : 0.12;
         const rightPhase = leftPhase > 1 ? 0.12 : 1.6;
         if (this.leftLamp) {
@@ -143,6 +164,12 @@ export class SignalGame implements GameModule {
           this.rightLamp.material.emissive.set(rightPhase > 1 ? this.beaconColors[1]! : '#4b5563');
           this.rightLamp.material.emissiveIntensity = rightPhase > 1 ? 2.2 : 0.3;
         }
+      }
+      for (const wheel of this.wheels) {
+        wheel.rotation.x -= delta * speed / 0.41;
+      }
+      if (this.hoseReel) {
+        this.hoseReel.rotation.x -= delta * 2.6;
       }
       if (this.distance > 46) {
         this.resetAt = time + 1.1;
@@ -159,8 +186,20 @@ export class SignalGame implements GameModule {
     this.resetAt = Number.POSITIVE_INFINITY;
     this.hud?.setProgress(0, 1);
     this.distance = 0;
-    this.car.position.set(-2.6, 0, 7);
-    this.car.rotation.y = Math.PI;
+    if (this.car) {
+      this.car.position.set(-2.6, 0, 7);
+      this.car.rotation.y = Math.PI;
+      this.car.position.y = 0;
+    }
+    if (this.beaconAssembly) {
+      this.beaconAssembly.rotation.set(0, 0, 0);
+    }
+    for (const wheel of this.wheels) {
+      wheel.rotation.set(0, 0, 0);
+    }
+    if (this.hoseReel) {
+      this.hoseReel.rotation.set(0, 0, 0);
+    }
     if (this.beacon) this.beacon.intensity = 0;
     if (this.leftLamp) {
       this.leftLamp.material.emissive.set(this.beaconColors[0]!);
@@ -170,6 +209,6 @@ export class SignalGame implements GameModule {
       this.rightLamp.material.emissive.set(this.beaconColors[1]!);
       this.rightLamp.material.emissiveIntensity = 1.4;
     }
-    this.createRandomVehicle();
+    void this.createRandomVehicle();
   }
 }

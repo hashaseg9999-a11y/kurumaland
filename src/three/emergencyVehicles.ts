@@ -9,11 +9,13 @@ import {
   SphereGeometry,
   TorusGeometry,
 } from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { EmergencyVehicleType } from './contracts';
 
 export interface EmergencyVehicleParts {
   group: Group;
   beacon: PointLight;
+  beaconAssembly: Group;
   leftLamp: Mesh<CylinderGeometry, MeshStandardMaterial>;
   rightLamp: Mesh<CylinderGeometry, MeshStandardMaterial>;
   beaconColors: [string, string];
@@ -24,6 +26,7 @@ interface VehicleSpec {
   secondaryColor: string;
   roofColor: string;
   stripeColor: string;
+  wheelRimColor: string;
   beaconColors: [string, string];
   ladder: boolean;
   cross: boolean;
@@ -37,6 +40,7 @@ const SPECS: Record<EmergencyVehicleType, VehicleSpec> = {
     secondaryColor: '#b71c1c',
     roofColor: '#e53935',
     stripeColor: '#f5f5f5',
+    wheelRimColor: '#cfd8dc',
     beaconColors: ['#ff1744', '#ffffff'],
     ladder: true,
     cross: false,
@@ -48,6 +52,7 @@ const SPECS: Record<EmergencyVehicleType, VehicleSpec> = {
     secondaryColor: '#eceff1',
     roofColor: '#ffffff',
     stripeColor: '#ff5252',
+    wheelRimColor: '#eceff1',
     beaconColors: ['#ff1744', '#2979ff'],
     ladder: false,
     cross: true,
@@ -59,6 +64,7 @@ const SPECS: Record<EmergencyVehicleType, VehicleSpec> = {
     secondaryColor: '#263238',
     roofColor: '#212121',
     stripeColor: '#1a1a1a',
+    wheelRimColor: '#90a4ae',
     beaconColors: ['#ff1744', '#2979ff'],
     ladder: false,
     cross: false,
@@ -67,19 +73,31 @@ const SPECS: Record<EmergencyVehicleType, VehicleSpec> = {
   },
 };
 
-function createWheel(): Group {
+function createWheel(rimColor = '#dfe7ec'): Group {
   const wheel = new Group();
-  const tyreGeometry = new CylinderGeometry(0.4, 0.4, 0.28, 28, 1);
-  const rimGeometry = new CylinderGeometry(0.2, 0.2, 0.3, 20, 1);
+  const tyreGeometry = new CylinderGeometry(0.41, 0.41, 0.29, 24);
+  const sideGeometry = new CylinderGeometry(0.425, 0.425, 0.055, 24);
+  const rimGeometry = new CylinderGeometry(0.21, 0.21, 0.31, 18);
+  const spokeGeometry = new BoxGeometry(0.34, 0.28, 0.08);
   const tyreMaterial = new MeshStandardMaterial({ color: '#2b3238', roughness: 0.82 });
-  const rimMaterial = new MeshStandardMaterial({ color: '#dfe7ec', metalness: 0.7, roughness: 0.22 });
+  const tyreSideMaterial = new MeshStandardMaterial({ color: '#465158', roughness: 0.68 });
+  const rimMaterial = new MeshStandardMaterial({ color: rimColor, metalness: 0.7, roughness: 0.22 });
   const tyre = new Mesh(tyreGeometry, tyreMaterial);
+  const leftTyreSide = new Mesh(sideGeometry, tyreSideMaterial);
+  const rightTyreSide = new Mesh(sideGeometry.clone(), tyreSideMaterial);
   const rim = new Mesh(rimGeometry, rimMaterial);
-  tyre.rotation.z = Math.PI / 2;
-  rim.rotation.z = Math.PI / 2;
+  const spoke = new Mesh(spokeGeometry, rimMaterial);
+  const crossSpoke = new Mesh(spokeGeometry.clone(), rimMaterial);
+  for (const item of [tyre, leftTyreSide, rightTyreSide, rim]) {
+    item.rotation.z = Math.PI / 2;
+  }
+  crossSpoke.rotation.x = Math.PI / 2;
+  leftTyreSide.position.x = 0.125;
+  rightTyreSide.position.x = -0.125;
   tyre.castShadow = true;
   rim.castShadow = true;
-  wheel.add(tyre, rim);
+  wheel.add(tyre, leftTyreSide, rightTyreSide, rim, spoke, crossSpoke);
+  wheel.userData.isEmergencyWheel = true;
   return wheel;
 }
 
@@ -87,9 +105,9 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   const spec = SPECS[type]!;
   const group = new Group();
 
-  const lowerGeometry = new BoxGeometry(1.62, 0.66, 3.1, 3, 2, 4);
-  const upperGeometry = new BoxGeometry(1.5, 0.78, 2.7, 3, 2, 4);
-  const cabinGeometry = new BoxGeometry(1.36, 0.58, 1.42, 2, 2, 2);
+  const lowerGeometry = new RoundedBoxGeometry(1.62, 0.66, 3.08, 4, 0.16);
+  const upperGeometry = new RoundedBoxGeometry(1.5, 0.78, 2.68, 4, 0.18);
+  const cabinGeometry = new RoundedBoxGeometry(1.36, 0.58, 1.42, 3, 0.14);
   const glassGeometry = new BoxGeometry(1.38, 0.44, 1.44);
 
   const paintMaterial = new MeshPhysicalMaterial({
@@ -117,6 +135,10 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   const darkDetailMaterial = new MeshStandardMaterial({ color: '#263238', roughness: 0.3 });
   const trimMaterial = new MeshStandardMaterial({ color: '#37474f', roughness: 0.38, metalness: 0.12 });
   const chromeMaterial = new MeshStandardMaterial({ color: '#cfd8dc', metalness: 0.68, roughness: 0.2 });
+  const rockerMaterial = new MeshStandardMaterial({ color: '#263238', roughness: 0.42 });
+
+  const rocker = new Mesh(new RoundedBoxGeometry(1.67, 0.15, 2.9, 2, 0.05), rockerMaterial);
+  rocker.position.set(0, 0.48, -0.02);
 
   const lower = new Mesh(lowerGeometry, paintMaterial);
   lower.position.y = 0.78;
@@ -137,7 +159,7 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   const grille = new Mesh(grilleGeometry, chromeMaterial);
   grille.position.set(0, 0.9, 1.58);
   const mirrorArmGeometry = new BoxGeometry(0.16, 0.05, 0.05);
-  const mirrorHeadGeometry = new BoxGeometry(0.06, 0.18, 0.14);
+  const mirrorHeadGeometry = new RoundedBoxGeometry(0.07, 0.19, 0.14, 2, 0.03);
   for (const x of [-0.88, 0.88]) {
     const armX = x > 0 ? x - 0.08 : x + 0.08;
     const mirrorArm = new Mesh(mirrorArmGeometry, trimMaterial);
@@ -146,39 +168,56 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     mirrorHead.position.set(x!, 1.6, 0.62);
     group.add(mirrorArm, mirrorHead);
   }
-  group.add(frontBumper, rearBumper, grille);
+  group.add(rocker, frontBumper, rearBumper, grille);
 
   if (type === 'fire-truck') {
     const compartmentLineGeometry = new BoxGeometry(0.02, 0.42, 0.03);
+    const compartmentHandleGeometry = new RoundedBoxGeometry(0.055, 0.075, 0.2, 2, 0.022);
     const compartmentLineMaterial = new MeshStandardMaterial({ color: '#ffcdd2', roughness: 0.4 });
+    const compartmentHandleMaterial = chromeMaterial;
     for (const sideX of [-0.83, 0.83]) {
       for (const z of [-0.7, -0.1, 0.5]) {
         const line = new Mesh(compartmentLineGeometry, compartmentLineMaterial);
         line.position.set(sideX!, 1.05, z!);
         group.add(line);
+        const handle = new Mesh(compartmentHandleGeometry, compartmentHandleMaterial);
+        handle.position.set(sideX! + (sideX! < 0 ? -0.03 : 0.03), 1.24, z! + (sideX! < 0 ? 0.16 : -0.16));
+        group.add(handle);
       }
     }
-    const hoseReelGeometry = new CylinderGeometry(0.18, 0.18, 0.12, 16);
+    const hoseReelGroup = new Group();
+    const hoseReelGeometry = new CylinderGeometry(0.18, 0.18, 0.14, 18);
     const hoseReel = new Mesh(hoseReelGeometry, trimMaterial);
+    const hose = new Mesh(new TorusGeometry(0.15, 0.045, 10, 20), darkDetailMaterial);
+    hose.rotation.y = Math.PI / 2;
     hoseReel.rotation.z = Math.PI / 2;
-    hoseReel.position.set(-0.55, 2.24, 0.28);
-    group.add(hoseReel);
+    hoseReelGroup.add(hoseReel, hose);
+    hoseReelGroup.position.set(-0.55, 2.25, 0.28);
+    hoseReelGroup.userData.animate = 'hose-reel';
+    group.add(hoseReelGroup);
   } else if (type === 'ambulance') {
     const roofBoxGeometry = new BoxGeometry(1.1, 0.14, 1.8);
     const roofBox = new Mesh(roofBoxGeometry, secondaryMaterial);
     roofBox.position.set(0, 2.26, 0.15);
-    const roofVentGeometry = new BoxGeometry(0.6, 0.08, 0.4);
+    const roofVentGeometry = new RoundedBoxGeometry(0.6, 0.09, 0.4, 2, 0.03);
     const roofVent = new Mesh(roofVentGeometry, paintMaterial);
     roofVent.position.set(0, 2.36, 0.35);
     group.add(roofBox, roofVent);
   } else {
     const antennaGeometry = new CylinderGeometry(0.025, 0.025, 0.55, 8);
+    const spotlightArmGeometry = new BoxGeometry(0.055, 0.055, 0.16);
+    const spotlightBodyGeometry = new CylinderGeometry(0.08, 0.1, 0.14, 14);
     const antenna = new Mesh(antennaGeometry, darkDetailMaterial);
     antenna.position.set(-0.45, 2.55, -0.85);
     const hoodStripeGeometry = new BoxGeometry(0.44, 0.02, 0.72);
     const hoodStripe = new Mesh(hoodStripeGeometry, stripeMaterial);
     hoodStripe.position.set(0, 1.04, 1.1);
-    group.add(antenna, hoodStripe);
+    const spotlightArm = new Mesh(spotlightArmGeometry, trimMaterial);
+    spotlightArm.position.set(0.82, 1.72, 0.62);
+    const spotlight = new Mesh(spotlightBodyGeometry, chromeMaterial);
+    spotlight.rotation.z = Math.PI / 2;
+    spotlight.position.set(0.93, 1.72, 0.62);
+    group.add(antenna, hoodStripe, spotlightArm, spotlight);
   }
 
   if (spec.stripe === 'horizontal') {
@@ -209,7 +248,7 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
 
   if (spec.ladder) {
     const railGeometry = new BoxGeometry(0.08, 0.08, 2.5);
-    const rungGeometry = new BoxGeometry(0.66, 0.06, 0.08);
+    const rungGeometry = new RoundedBoxGeometry(0.66, 0.07, 0.09, 2, 0.03);
     const metalMaterial = new MeshStandardMaterial({ color: '#b0bec5', metalness: 0.62, roughness: 0.24 });
     for (const x of [-0.28, 0.28]) {
       const rail = new Mesh(railGeometry, metalMaterial);
@@ -228,12 +267,18 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   }
 
   const beaconBaseGeometry = new BoxGeometry(0.92, 0.16, 0.38);
+  const beaconBaseTopGeometry = new RoundedBoxGeometry(1.02, 0.055, 0.46, 2, 0.024);
   const beaconBaseMaterial = trimMaterial;
   const beaconBase = new Mesh(beaconBaseGeometry, beaconBaseMaterial);
   beaconBase.position.set(0, 2.32, -0.18);
-  group.add(beaconBase);
+  const beaconBaseTop = new Mesh(beaconBaseTopGeometry, darkDetailMaterial);
+  beaconBaseTop.position.set(0, 2.41, -0.18);
+  const beaconAssembly = new Group();
+  beaconAssembly.add(beaconBaseTop);
+  group.add(beaconBase, beaconAssembly);
 
-  const lampGeometry = new CylinderGeometry(0.15, 0.15, 0.26, 20);
+  const lampGeometry = new CylinderGeometry(0.16, 0.16, 0.24, 20);
+  const lampCapGeometry = new SphereGeometry(0.155, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
   const leftLampMaterial = new MeshStandardMaterial({
     color: spec.beaconColors[0],
     emissive: spec.beaconColors[0],
@@ -248,20 +293,24 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   leftLamp.position.set(-0.24, 2.5, -0.18);
   const rightLamp = new Mesh(lampGeometry.clone(), rightLampMaterial);
   rightLamp.position.set(0.24, 2.5, -0.18);
-  group.add(leftLamp, rightLamp);
+  const leftLampCap = new Mesh(lampCapGeometry, leftLampMaterial);
+  leftLampCap.position.set(-0.24, 2.62, -0.18);
+  const rightLampCap = new Mesh(lampCapGeometry.clone(), rightLampMaterial);
+  rightLampCap.position.set(0.24, 2.62, -0.18);
+  beaconAssembly.add(leftLamp, rightLamp, leftLampCap, rightLampCap);
 
-  const beaconHousingGeometry = new BoxGeometry(0.82, 0.34, 0.3);
+  const beaconHousingGeometry = new RoundedBoxGeometry(0.84, 0.35, 0.31, 2, 0.07);
   const beaconHousingMaterial = darkDetailMaterial;
   const beaconHousing = new Mesh(beaconHousingGeometry, beaconHousingMaterial);
   beaconHousing.position.set(0, 2.48, -0.18);
-  group.add(beaconHousing);
+  beaconAssembly.add(beaconHousing);
 
   if (spec.sirenShape === 'dome') {
     const domeGeometry = new SphereGeometry(0.17, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMaterial = new MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.12, transparent: true, opacity: 0.55 });
     const dome = new Mesh(domeGeometry, domeMaterial);
     dome.position.set(0, 2.58, -0.18);
-    group.add(dome);
+    beaconAssembly.add(dome);
   }
 
   const beacon = new PointLight(spec.beaconColors[0], 0, 11, 2);
@@ -269,12 +318,12 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   group.add(beacon);
 
   for (const [x, z] of [[-0.84, 1.0], [0.84, 1.0], [-0.84, -1.06], [0.84, -1.06]] as const) {
-    const wheel = createWheel();
+    const wheel = createWheel(spec.wheelRimColor);
     wheel.position.set(x!, 0.4, z!);
     group.add(wheel);
   }
 
-  const headlightGeometry = new BoxGeometry(0.28, 0.18, 0.08);
+  const headlightGeometry = new RoundedBoxGeometry(0.29, 0.19, 0.08, 2, 0.034);
   const headlightMaterial = new MeshStandardMaterial({
     color: '#fffbe6',
     emissive: '#ffe27a',
@@ -324,6 +373,18 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   smile.position.set(0, 1.0, 1.57);
   group.add(smile);
 
+  for (const x of [-0.62, 0.62]) {
+    const cheek = new Mesh(new SphereGeometry(0.09, 12, 10), new MeshStandardMaterial({
+      color: '#ffb3a7',
+      emissive: '#ff8a80',
+      emissiveIntensity: 0.16,
+      roughness: 0.42,
+    }));
+    cheek.position.set(x!, 0.96, 1.55);
+    cheek.scale.set(1, 0.78, 0.4);
+    group.add(cheek);
+  }
+
   group.traverse((child) => {
     if (child instanceof Mesh) {
       child.castShadow = true;
@@ -334,13 +395,23 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   return {
     group,
     beacon,
+    beaconAssembly,
     leftLamp,
     rightLamp,
     beaconColors: [...spec.beaconColors] as [string, string],
   };
 }
 
+export const DEFAULT_EMERGENCY_TYPE: EmergencyVehicleType = 'fire-truck';
+
+/**
+ * Fire trucks are the familiar default, while the other two vehicles still
+ * appear often enough to keep repeated rounds surprising.
+ */
 export function pickRandomEmergencyType(): EmergencyVehicleType {
   const types: readonly EmergencyVehicleType[] = ['fire-truck', 'ambulance', 'police-car'];
-  return types[Math.floor(Math.random() * types.length)]!;
+  const roll = Math.random();
+  if (roll < 0.5) return types[0]!;
+  if (roll < 0.75) return types[1]!;
+  return types[2]!;
 }
