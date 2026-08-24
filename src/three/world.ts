@@ -102,7 +102,7 @@ function terrainHeight(x: number, z: number): number {
 }
 
 const PRESETS = {
-  drive: { position: [0, 4.4, 10.2], target: [0, 1.1, -4] },
+  drive: { position: [0, 6.4, 16.2], target: [0, 0.7, -1.5] },
   garage: { position: [0, 7.8, 10.8], target: [0, 0.8, -1.5] },
   size: { position: [0, 7.6, 11.0], target: [0, 0.9, -1.3] },
   pool: { position: [0, 7.6, 11.4], target: [0, 1.2, -1.2] },
