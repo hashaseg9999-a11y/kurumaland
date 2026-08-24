@@ -105,9 +105,17 @@ const PRESETS = {
   drive: { position: [0, 6.4, 16.2], target: [0, 0.7, -1.5] },
   garage: { position: [0, 7.8, 10.8], target: [0, 0.8, -1.5] },
   size: { position: [0, 7.6, 11.0], target: [0, 0.9, -1.3] },
-  pool: { position: [0, 7.6, 11.4], target: [0, 1.2, -1.2] },
+  pool: { position: [0, 9.2, 14.6], target: [0, 1.1, -1.4] },
   train: { position: [0, 6.8, 11.6], target: [0, 1.0, -1.8] },
 } as const;
+
+const PRESET_SKY: Record<keyof typeof PRESETS, { top: string; horizon: string; ground: string }> = {
+  drive: { top: '#7ec8f7', horizon: '#dff1fb', ground: '#7fb168' },
+  garage: { top: '#8fd0f2', horizon: '#e8f6ff', ground: '#8fbf72' },
+  size: { top: '#a5d8ff', horizon: '#eef8ff', ground: '#95c98a' },
+  pool: { top: '#8ed4f5', horizon: '#f0fbff', ground: '#8cc27a' },
+  train: { top: '#9fd4ef', horizon: '#f2f9f2', ground: '#a3cf8f' },
+};
 
 export class ThreeWorld implements World3D {
   readonly scene = new Scene();
@@ -137,6 +145,12 @@ export class ThreeWorld implements World3D {
   private previousCameraPosition: Vec3 = [0, 4.4, 10.2];
   private previousCameraTarget: Vec3 = [0, 1.1, -4];
   private currentCameraTarget: Vec3 = [0, 1.1, -4];
+  private readonly skyUniforms = {
+    topColor: { value: new Color(PRESET_SKY.drive.top) },
+    bottomColor: { value: new Color(PRESET_SKY.drive.horizon) },
+    offset: { value: 18 },
+    exponent: { value: 0.72 },
+  };
   private readonly sunLight: DirectionalLight;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private qualityStep = 0;
@@ -154,7 +168,34 @@ export class ThreeWorld implements World3D {
     this.canvas.className = 'three-world__canvas';
     this.canvas.style.touchAction = 'none';
     this.camera.far = 420;
-    this.scene.background = new Color(PALETTE.skyHorizon);
+    const skyGeometry = new SphereGeometry(240, 24, 14);
+    const skyMaterial = new ShaderMaterial({
+      uniforms: this.skyUniforms,
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPosition.xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offset;
+        uniform float exponent;
+        varying vec3 vWorldPosition;
+        void main() {
+          float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
+          gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+        }
+      `,
+      side: BackSide,
+      depthWrite: false,
+    });
+    const sky = new Mesh(skyGeometry, skyMaterial);
+    this.scene.add(sky);
+    this.disposables.push(skyGeometry, skyMaterial);
     this.scene.fog = new Fog(PALETTE.fog, 42, 175);
 
     const hemisphere = new HemisphereLight(PALETTE.skylight, PALETTE.ground, 0.85);
@@ -220,6 +261,9 @@ export class ThreeWorld implements World3D {
   }
 
   setCameraPreset(preset: CameraPresetName): void {
+    const sky = PRESET_SKY[preset];
+    this.skyUniforms.topColor.value.set(sky.top);
+    this.skyUniforms.bottomColor.value.set(sky.horizon);
     if (this.reducedMotion) {
       this.cameraPreset = preset;
       this.cameraTransition = 0;

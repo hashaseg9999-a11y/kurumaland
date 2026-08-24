@@ -4,6 +4,7 @@ import {
   Group,
   Mesh,
   MeshPhysicalMaterial,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   SphereGeometry,
   TorusGeometry,
@@ -70,8 +71,9 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
   const car = new Group();
 
   const lightGeometry = new RoundedBoxGeometry(0.29, 0.17, 0.08, 2, 0.035);
-  const faceGeometry = new SphereGeometry(0.14, 18, 16);
-  const cheekGeometry = new SphereGeometry(0.075, 12, 10);
+  const faceGeometry = new SphereGeometry(0.17, 20, 18);
+  const highlightGeometry = new SphereGeometry(0.05, 10, 8);
+  const cheekGeometry = new SphereGeometry(0.095, 14, 12);
 
   const paintMaterial = new MeshPhysicalMaterial({
     color: bodyColor,
@@ -97,9 +99,10 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
   const cheekMaterial = new MeshStandardMaterial({
     color: '#ffb3a7',
     emissive: '#ff8a80',
-    emissiveIntensity: 0.16,
+    emissiveIntensity: 0.3,
     roughness: 0.42,
   });
+  const highlightMaterial = new MeshBasicMaterial({ color: '#ffffff' });
 
   let faceEyeY = 1.06;
   let faceSmileY = 0.94;
@@ -281,23 +284,30 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
   for (const x of [-0.27, 0.27]) {
     const eye = new Mesh(faceGeometry, whiteMaterial);
     eye.position.set(x!, faceEyeY, 1.33);
-    eye.scale.set(1, 1.05, 0.5);
+    eye.scale.set(1, 1.12, 0.5);
     const pupil = new Mesh(faceGeometry, darkMaterial);
     pupil.position.set(x!, faceEyeY + 0.01, 1.4);
-    pupil.scale.set(0.5, 0.52, 0.28);
-    car.add(eye, pupil);
+    pupil.scale.set(0.58, 0.6, 0.3);
+    const highlight = new Mesh(highlightGeometry, highlightMaterial);
+    highlight.position.set(x! + 0.045, faceEyeY + 0.07, 1.45);
+    highlight.scale.set(1, 1, 0.5);
+    car.add(eye, pupil, highlight);
   }
   for (const x of [-0.52, 0.52]) {
     const cheek = new Mesh(cheekGeometry, cheekMaterial);
     cheek.position.set(x!, faceSmileY + 0.03, 1.31);
-    cheek.scale.set(1, 0.78, 0.42);
+    cheek.scale.set(1.1, 0.82, 0.42);
     car.add(cheek);
   }
-  const smile = new Mesh(new TorusGeometry(0.2, 0.045, 12, 24, Math.PI), darkMaterial);
+  const smile = new Mesh(new TorusGeometry(0.23, 0.052, 12, 24, Math.PI), darkMaterial);
   smile.rotation.x = Math.PI / 2;
   smile.rotation.z = Math.PI;
   smile.position.set(0, faceSmileY, 1.33);
   car.add(smile);
+  const smileHighlight = new Mesh(new SphereGeometry(0.045, 10, 8), highlightMaterial);
+  smileHighlight.position.set(-0.1, faceSmileY + 0.05, 1.4);
+  smileHighlight.scale.set(1, 0.7, 0.4);
+  car.add(smileHighlight);
 
   car.traverse((child) => {
     if (child instanceof Mesh) {

@@ -14,10 +14,10 @@ const GRAVITY = 13;
 const BONUS_DISTANCE = 5.2;
 const BONUS_DURATION_MS = 2600;
 const BALL_COLORS = ['#ef5350', '#42a5f5', '#ffca28', '#66bb6a', '#ab47bc', '#26c6da'];
-const POOL_MIN_X = -5.2;
-const POOL_MAX_X = 5.2;
-const POOL_MIN_Z = -7;
-const POOL_MAX_Z = 4.2;
+const POOL_MIN_X = -6.6;
+const POOL_MAX_X = 6.6;
+const POOL_MIN_Z = -9.5;
+const POOL_MAX_Z = 6.5;
 
 export class PoolGame implements GameModule {
   readonly id = 'ball-pool';
@@ -66,7 +66,7 @@ export class PoolGame implements GameModule {
     const material = new THREE.MeshStandardMaterial({ color: BALL_COLORS[index % BALL_COLORS.length]!, roughness: 0.24 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
-    mesh.position.set(-4 + Math.random() * 8, radius + Math.random() * 3, -3 + Math.random() * 6.2);
+    mesh.position.set(-5 + Math.random() * 10, radius + Math.random() * 3, -4 + Math.random() * 8.5);
     this.context.world.add(mesh);
     this.balls.push({ mesh, velocity: new THREE.Vector3(), radius, dragging: false });
   }
@@ -179,7 +179,11 @@ export class PoolGame implements GameModule {
     const direction = vector.sub(this.context.world.camera.position).normalize();
     const distance = -(this.context.world.camera.position.y - ball.radius) / direction.y;
     const point = this.context.world.camera.position.clone().add(direction.multiplyScalar(distance));
-    ball.mesh.position.set(THREE.MathUtils.clamp(point.x, -5.2, 5.2), Math.max(ball.radius, point.y), THREE.MathUtils.clamp(point.z, -7, 4.2));
+    ball.mesh.position.set(
+      THREE.MathUtils.clamp(point.x, POOL_MIN_X, POOL_MAX_X),
+      Math.max(ball.radius, point.y),
+      THREE.MathUtils.clamp(point.z, POOL_MIN_Z, POOL_MAX_Z),
+    );
   }
 
   private triggerBonus(): void {
@@ -210,12 +214,12 @@ export class PoolGame implements GameModule {
           ball.velocity.y = Math.abs(ball.velocity.y) * 0.72;
           if (Math.abs(ball.velocity.y) > 1.2) this.context?.sfx('pop');
         }
-        if (Math.abs(ball.mesh.position.x) > 5.2) {
-          ball.mesh.position.x = Math.sign(ball.mesh.position.x) * 5.2;
+        if (Math.abs(ball.mesh.position.x) > POOL_MAX_X) {
+          ball.mesh.position.x = Math.sign(ball.mesh.position.x) * POOL_MAX_X;
           ball.velocity.x *= -0.72;
         }
-        if (ball.mesh.position.z > 4.2) { ball.mesh.position.z = 4.2; ball.velocity.z *= -0.72; }
-        if (ball.mesh.position.z < -7) { ball.mesh.position.z = -7; ball.velocity.z *= -0.72; }
+        if (ball.mesh.position.z > POOL_MAX_Z) { ball.mesh.position.z = POOL_MAX_Z; ball.velocity.z *= -0.72; }
+        if (ball.mesh.position.z < POOL_MIN_Z) { ball.mesh.position.z = POOL_MIN_Z; ball.velocity.z *= -0.72; }
       }
     }
     if (Date.now() < this.bonusUntil && time >= this.nextBonusPulseAt) {

@@ -39,12 +39,14 @@ export class LineUpGame implements GameModule {
   private sparkles: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
   private sparkleUntil = 0;
   private guideBaseX = 0.15;
+  private trackGroup?: THREE.Group;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'ならべて れっしゃ');
     this.hud.setProgress(0, 3);
     context.world.setCameraPreset('train');
+    this.buildTrack();
     this.buildLocomotive();
     this.createCouplingGuide();
     for (const color of COLORS) this.buildCar(color);
@@ -62,6 +64,8 @@ export class LineUpGame implements GameModule {
     this.clearSparkles();
     if (this.guideGroup) removeAndDispose(this.guideGroup);
     this.guideGroup = undefined;
+    if (this.trackGroup) removeAndDispose(this.trackGroup);
+    this.trackGroup = undefined;
     this.couplingRing = undefined;
     this.guideArrow = undefined;
     this.sparkleGroup = undefined;
@@ -70,6 +74,36 @@ export class LineUpGame implements GameModule {
     this.cars = [];
     this.cleanup = [];
     this.context = null;
+  }
+
+  private buildTrack(): void {
+    if (!this.context) return;
+    const track = new THREE.Group();
+    const ballastGeometry = new THREE.BoxGeometry(3.4, 0.1, 46);
+    const ballastMaterial = new THREE.MeshStandardMaterial({ color: '#c9b79c', roughness: 0.92 });
+    const ballast = new THREE.Mesh(ballastGeometry, ballastMaterial);
+    ballast.position.set(0, 0.03, LOCOMOTIVE_Z + 6);
+    ballast.receiveShadow = true;
+
+    const tieGeometry = new THREE.BoxGeometry(3.0, 0.09, 0.5);
+    const tieMaterial = new THREE.MeshStandardMaterial({ color: '#7a5c44', roughness: 0.85 });
+    const railGeometry = new THREE.BoxGeometry(0.1, 0.1, 46);
+    const railMaterial = new THREE.MeshStandardMaterial({ color: '#9aa5ad', metalness: 0.6, roughness: 0.3 });
+    const ties: THREE.Mesh[] = [];
+    for (let z = LOCOMOTIVE_Z - 17; z <= LOCOMOTIVE_Z + 29; z += 1.4) {
+      const tie = new THREE.Mesh(tieGeometry, tieMaterial);
+      tie.position.set(0, 0.1, z);
+      tie.receiveShadow = true;
+      ties.push(tie);
+    }
+    const leftRail = new THREE.Mesh(railGeometry, railMaterial);
+    leftRail.position.set(-0.72, 0.17, LOCOMOTIVE_Z + 6);
+    const rightRail = new THREE.Mesh(railGeometry.clone(), railMaterial);
+    rightRail.position.set(0.72, 0.17, LOCOMOTIVE_Z + 6);
+
+    track.add(ballast, ...ties, leftRail, rightRail);
+    this.context.world.add(track);
+    this.trackGroup = track;
   }
 
   private buildLocomotive(): void {
@@ -172,7 +206,8 @@ export class LineUpGame implements GameModule {
   private buildCar(color: TrainColor): void {
     if (!this.context) return;
     const group = createCar(color, 0.95);
-    group.position.set(color === 'red' ? -3.8 : color === 'blue' ? 3.7 : -2.2, 0, 1.8 + Math.random() * 1.6);
+    const startX = color === 'red' ? -5.4 : color === 'blue' ? 5.2 : -2.6;
+    group.position.set(startX, 0, 3.2 + (color === 'green' ? 1.6 : Math.random() * 0.8));
     group.rotation.y = Math.PI;
     this.context.world.add(group);
     this.cars.push({ group, color, dragging: false });
@@ -225,7 +260,8 @@ export class LineUpGame implements GameModule {
         } else {
           item.rejectUntil = performance.now() + 520;
           this.context.sfx('softNo');
-          item.group.position.set(item.color === 'red' ? -3.8 : item.color === 'blue' ? 3.7 : -2.2, 0, 1.8 + Math.random() * 1.6);
+        const startX = item.color === 'red' ? -5.4 : item.color === 'blue' ? 5.2 : -2.6;
+        item.group.position.set(startX, 0, 3.2 + (item.color === 'green' ? 1.6 : Math.random() * 0.8));
         }
       } else {
         item.lastEvent = undefined;
@@ -331,7 +367,8 @@ export class LineUpGame implements GameModule {
     for (const car of this.cars) {
       car.attached = false;
       car.group.scale.setScalar(0.95);
-      car.group.position.set(car.color === 'red' ? -3.8 : car.color === 'blue' ? 3.7 : -2.2, 0, 1.8 + Math.random() * 1.6);
+      const startX = car.color === 'red' ? -5.4 : car.color === 'blue' ? 5.2 : -2.6;
+      car.group.position.set(startX, 0, 3.2 + (car.color === 'green' ? 1.6 : Math.random() * 0.8));
     }
   }
 }

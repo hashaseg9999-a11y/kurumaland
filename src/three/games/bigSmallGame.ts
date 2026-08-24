@@ -6,10 +6,10 @@ import { createGameHud } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LANES: Record<CarColorName, [number, number]> = {
-  red: [-3.2, 3.2],
-  blue: [-3.4, 3.0],
-  yellow: [-3.0, 3.4],
-  green: [-3.1, 3.1],
+  red: [-3.4, 3.4],
+  blue: [-3.7, 3.1],
+  yellow: [-3.1, 3.7],
+  green: [-3.25, 3.25],
 };
 
 interface SizedCar {
@@ -135,9 +135,9 @@ export class BigSmallGame implements GameModule {
     if (!this.context) return;
     const bigCar = createCar(color, 1.45);
     const smallCar = createCar(color, 0.78);
-    const z = 1.6 + Math.random() * 1.4;
-    bigCar.position.set(-4.8 + Math.random() * 2, 0, z);
-    smallCar.position.set(2.7 + Math.random() * 2, 0, z + 0.8);
+    const z = 3.4 + Math.random() * 1.2;
+    bigCar.position.set(-6.4, 0, z);
+    smallCar.position.set(5.9, 0, z + 1.1);
     bigCar.rotation.y = Math.PI;
     smallCar.rotation.y = Math.PI;
     this.context.world.add(bigCar, smallCar);
@@ -195,7 +195,7 @@ export class BigSmallGame implements GameModule {
       } else {
         if (item.group.position.z < -0.5) this.context.sfx('softNo');
         item.rejectUntil = performance.now() + 420;
-        item.group.position.z = 1.6 + Math.random() * 1.4;
+        item.group.position.z = item.big ? 3.4 + Math.random() * 1.2 : 4.5 + Math.random() * 1.2;
         item.lastEvent = undefined;
       }
       item.dragging = false;
@@ -268,8 +268,8 @@ export class BigSmallGame implements GameModule {
     this.hud?.setProgress(0, 8);
     for (const car of this.cars) {
       car.parked = false;
-      const z = 1.6 + Math.random() * 1.4;
-      car.group.position.set(car.big ? -4.8 + Math.random() * 2 : 2.7 + Math.random() * 2, 0, car.big ? z : z + 0.8);
+      const z = 3.4 + Math.random() * 1.2;
+      car.group.position.set(car.big ? -6.4 : 5.9, 0, car.big ? z : z + 1.1);
       car.group.rotation.y = Math.PI;
     }
   }

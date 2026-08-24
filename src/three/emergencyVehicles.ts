@@ -4,6 +4,7 @@ import {
   Group,
   Mesh,
   MeshPhysicalMaterial,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PointLight,
   SphereGeometry,
@@ -354,24 +355,33 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     group.add(fogLight);
   }
 
-  const faceGeometry = new SphereGeometry(0.16, 22, 22);
+  const faceGeometry = new SphereGeometry(0.19, 22, 22);
+  const highlightGeometry = new SphereGeometry(0.055, 10, 8);
   const eyeWhiteMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.22 });
   const pupilMaterial = new MeshStandardMaterial({ color: '#263238', roughness: 0.28 });
+  const highlightMaterial = new MeshBasicMaterial({ color: '#ffffff' });
   for (const x of [-0.34, 0.34]) {
     const eye = new Mesh(faceGeometry, eyeWhiteMaterial);
     eye.position.set(x!, 1.16, 1.57);
-    eye.scale.set(1, 1.06, 0.48);
+    eye.scale.set(1, 1.14, 0.48);
     const pupil = new Mesh(faceGeometry, pupilMaterial);
     pupil.position.set(x!, 1.17, 1.65);
-    pupil.scale.set(0.5, 0.52, 0.26);
-    group.add(eye, pupil);
+    pupil.scale.set(0.58, 0.6, 0.28);
+    const highlight = new Mesh(highlightGeometry, highlightMaterial);
+    highlight.position.set(x! + 0.05, 1.24, 1.7);
+    highlight.scale.set(1, 1, 0.5);
+    group.add(eye, pupil, highlight);
   }
-  const smileGeometry = new TorusGeometry(0.22, 0.05, 12, 24, Math.PI);
+  const smileGeometry = new TorusGeometry(0.25, 0.058, 12, 24, Math.PI);
   const smile = new Mesh(smileGeometry, pupilMaterial);
   smile.rotation.x = Math.PI / 2;
   smile.rotation.z = Math.PI;
   smile.position.set(0, 1.0, 1.57);
   group.add(smile);
+  const smileHighlight = new Mesh(new SphereGeometry(0.05, 10, 8), highlightMaterial);
+  smileHighlight.position.set(-0.11, 1.06, 1.65);
+  smileHighlight.scale.set(1, 0.7, 0.4);
+  group.add(smileHighlight);
 
   for (const x of [-0.62, 0.62]) {
     const cheek = new Mesh(new SphereGeometry(0.09, 12, 10), new MeshStandardMaterial({
@@ -380,8 +390,8 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
       emissiveIntensity: 0.16,
       roughness: 0.42,
     }));
-    cheek.position.set(x!, 0.96, 1.55);
-    cheek.scale.set(1, 0.78, 0.4);
+    cheek.position.set(x!, 0.94, 1.55);
+    cheek.scale.set(1.12, 0.84, 0.4);
     group.add(cheek);
   }
 
