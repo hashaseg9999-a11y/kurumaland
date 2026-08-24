@@ -15,8 +15,8 @@ export default defineConfig({
       },
       manifest: {
         id: './',
-        name: 'KurumaLand',
-        short_name: 'KurumaLand',
+        name: 'しゅんいちランド',
+        short_name: 'しゅんいちランド',
         description: '幼児向け車テーマ知育アプリ',
         lang: 'ja',
         start_url: './',

@@ -7,6 +7,7 @@ export type { VocabKey } from './vocab';
 
 export interface SpeechService {
   speak(key: VocabKey): void;
+  speakDirect(japaneseText: string): void;
   unlock(): void;
   getLanguage(): Lang;
 }
@@ -84,6 +85,18 @@ class WebSpeechService implements SpeechService {
     } catch {
       // 音声APIが不安定な環境でも、遊び自体は止めない。
     }
+  }
+
+  speakDirect(japaneseText: string): void {
+    if (!this.unlocked || !this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try { this.synthesis.cancel(); } catch { return; }
+    const utterance = new SpeechSynthesisUtterance(japaneseText);
+    utterance.lang = 'ja-JP';
+    utterance.rate = SPEECH_RATE;
+    utterance.pitch = 1.15;
+    const voice = this.findVoice('ja-JP');
+    if (voice) utterance.voice = voice;
+    this.synthesis.speak(utterance);
   }
 
   getLanguage(): Lang {

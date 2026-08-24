@@ -24,15 +24,20 @@ export class ParticleSystem {
   private animId: number | null = null;
   private isDestroyed = false;
   private dpr = 1;
+  private readonly reduceMotion: boolean;
 
   constructor(container: HTMLElement) {
+    this.reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     this.canvas = document.createElement('canvas');
     this.canvas.style.position = 'absolute';
     this.canvas.style.inset = '0';
     this.canvas.style.width = '100%';
     this.canvas.style.height = '100%';
     this.canvas.style.pointerEvents = 'none';
-    this.canvas.style.zIndex = '30';
+    this.canvas.style.zIndex = '5';
 
     container.appendChild(this.canvas);
     const ctx = this.canvas.getContext('2d');
@@ -59,6 +64,7 @@ export class ParticleSystem {
   }
 
   public emitSparkles(x: number, y: number, count = 16, colorHex = '#ffd700'): void {
+    if (this.reduceMotion) return;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5);
       const speed = 3.0 + Math.random() * 5.0;
@@ -80,6 +86,7 @@ export class ParticleSystem {
   }
 
   public emitBubbles(x: number, y: number, count = 8): void {
+    if (this.reduceMotion) return;
     const colors = ['rgba(255,255,255,0.95)', 'rgba(186,230,253,0.92)', 'rgba(254,215,170,0.92)', 'rgba(244,114,182,0.9)'];
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -132,6 +139,7 @@ export class ParticleSystem {
   }
 
   public emitStars(x: number, y: number, count = 24, palette?: string[]): void {
+    if (this.reduceMotion) return;
     const defaultColors = ['#ff4081', '#ffd700', '#00e676', '#38bdf8', '#a855f7', '#fb923c'];
     const colors = palette && palette.length > 0 ? palette : defaultColors;
     for (let i = 0; i < count; i++) {
@@ -155,6 +163,7 @@ export class ParticleSystem {
   }
 
   public emitMusicNotes(x: number, y: number, count = 4): void {
+    if (this.reduceMotion) return;
     const noteColors = ['#ff4081', '#7c4dff', '#00e5ff', '#ffd700', '#00e676'];
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -175,6 +184,7 @@ export class ParticleSystem {
   }
 
   public emitConfetti(x: number, y: number, count = 35): void {
+    if (this.reduceMotion) return;
     const colors = ['#ff007f', '#ffcc00', '#00e676', '#00b0ff', '#aa00ff', '#ff3d00'];
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
@@ -219,6 +229,7 @@ export class ParticleSystem {
   }
 
   public emitFlowers(x: number, y: number, count = 8): void {
+    if (this.reduceMotion) return;
     const flowerColors = ['#ff69b4', '#ffd700', '#00e676', '#a855f7', '#38bdf8'];
     for (let i = 0; i < count; i++) {
       this.particles.push({

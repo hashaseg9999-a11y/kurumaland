@@ -37,9 +37,22 @@ export function installParentalGate(
 ): () => void {
   const holdDurationMs = options.holdDurationMs ?? DEFAULT_HOLD_DURATION_MS;
   let timerId: number | null = null;
+  let progressRafId: number | null = null;
   let activePointerId: number | null = null;
   let startX = 0;
   let startY = 0;
+
+  const startProgressRing = (): void => {
+    const startedAt = performance.now();
+    const tick = (): void => {
+      const ratio = Math.min(1, (performance.now() - startedAt) / holdDurationMs);
+      trigger.style.setProperty('--hold-progress', String(Math.round(ratio * 100)) + '%');
+      if (ratio < 1 && timerId !== null) {
+        progressRafId = window.requestAnimationFrame(tick);
+      }
+    };
+    progressRafId = window.requestAnimationFrame(tick);
+  };
 
   const releasePointer = (pointerId: number): void => {
     try {
@@ -56,6 +69,12 @@ export function installParentalGate(
       window.clearTimeout(timerId);
       timerId = null;
     }
+
+    if (progressRafId !== null) {
+      window.cancelAnimationFrame(progressRafId);
+      progressRafId = null;
+    }
+    trigger.style.removeProperty('--hold-progress');
 
     if (releaseCapture && activePointerId !== null) {
       releasePointer(activePointerId);
@@ -75,6 +94,7 @@ export function installParentalGate(
     startX = event.clientX;
     startY = event.clientY;
     trigger.classList.add('is-holding');
+    startProgressRing();
 
     try {
       trigger.setPointerCapture(event.pointerId);
@@ -94,6 +114,34 @@ export function installParentalGate(
 
       onOpen();
     }, holdDurationMs);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.repeat && activePointerId === null && timerId === null) {
+      event.preventDefault();
+      activePointerId = -1;
+      trigger.classList.add('is-holding');
+      startProgressRing();
+      timerId = window.setTimeout(() => {
+        timerId = null;
+        activePointerId = null;
+        trigger.classList.remove('is-holding');
+        if (progressRafId !== null) {
+          window.cancelAnimationFrame(progressRafId);
+          progressRafId = null;
+        }
+        onOpen();
+      }, holdDurationMs);
+    } else if ((event.key === 'Enter' || event.key === ' ') && activePointerId === -1) {
+      // Prevent repeated keydown from restarting the hold.
+      event.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (event: KeyboardEvent): void => {
+    if ((event.key === 'Enter' || event.key === ' ') && activePointerId === -1) {
+      cancelHold(false);
+    }
   };
 
   const handlePointerMove = (event: PointerEvent): void => {
@@ -129,6 +177,8 @@ export function installParentalGate(
   trigger.addEventListener('pointercancel', handlePointerEnd);
   trigger.addEventListener('lostpointercapture', handleLostPointerCapture);
   trigger.addEventListener('contextmenu', preventContextMenu);
+  trigger.addEventListener('keydown', handleKeyDown);
+  trigger.addEventListener('keyup', handleKeyUp);
 
   return () => {
     cancelHold();
@@ -138,6 +188,8 @@ export function installParentalGate(
     trigger.removeEventListener('pointercancel', handlePointerEnd);
     trigger.removeEventListener('lostpointercapture', handleLostPointerCapture);
     trigger.removeEventListener('contextmenu', preventContextMenu);
+    trigger.removeEventListener('keydown', handleKeyDown);
+    trigger.removeEventListener('keyup', handleKeyUp);
   };
 }
 
