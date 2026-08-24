@@ -96,6 +96,56 @@ button:focus-visible {
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
+/* Install prompt banner (PWA / iOS Add to Home Screen) */
+.install-banner {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 560px);
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid var(--card-border);
+  box-shadow: 0 8px 24px rgba(21, 51, 74, 0.18);
+  font-size: var(--fs-badge);
+  line-height: 1.4;
+}
+
+.install-banner-icon {
+  font-size: 1.4em;
+}
+
+.install-banner-message {
+  margin: 0;
+  color: var(--ink);
+}
+
+.install-banner-install {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.install-banner-close {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1.2em;
+  line-height: 1;
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   .ending-play-again:hover {
     transform: translateX(-50%) translateY(-2px) scale(1.04);

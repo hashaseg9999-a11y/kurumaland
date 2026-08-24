@@ -4,6 +4,7 @@ import { activities } from './activities';
 import { EndSessionController } from './core/endSession';
 import { mountParentalSettingsGate } from './core/gate';
 import { getI18nText } from './core/i18n';
+import { mountInstallPrompt } from './core/installPrompt';
 import { ActivityRouter } from './core/router';
 import { loadSettings, saveSettings } from './core/settings';
 import { createSfxService } from './core/sfx';
@@ -31,6 +32,8 @@ const endSession = new EndSessionController({
 
 const routeRoot = document.createElement('main');
 routeRoot.className = 'router-root';
+
+mountInstallPrompt(app, speech.getLanguage());
 
 const orientationOverlay = document.createElement('div');
 orientationOverlay.className = 'orientation-overlay';
