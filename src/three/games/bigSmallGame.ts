@@ -199,8 +199,9 @@ export class BigSmallGame implements GameModule {
     const bigCar = createCar(color, 1.45);
     const smallCar = createCar(color, 0.78);
     const z = 3.4 + Math.random() * 1.2;
-    bigCar.position.set(-6.4, 0, z);
-    smallCar.position.set(5.9, 0, z + 1.1);
+    const laneIndex = this.cars.filter((car) => car.big === true).length;
+    bigCar.position.set(-6.4, 0, z - laneIndex * 4.4);
+    smallCar.position.set(5.9, 0, z + 1.1 + laneIndex * 4.4);
     bigCar.rotation.y = Math.PI;
     smallCar.rotation.y = Math.PI;
     this.context.world.add(bigCar, smallCar);
@@ -348,7 +349,8 @@ export class BigSmallGame implements GameModule {
     for (const car of this.cars) {
       car.parked = false;
       const z = 3.4 + Math.random() * 1.2;
-      car.group.position.set(car.big ? -6.4 : 5.9, 0, car.big ? z : z + 1.1);
+      const laneIndex = this.cars.filter((entry) => entry.big === car.big && this.cars.indexOf(entry) < this.cars.indexOf(car)).length;
+      car.group.position.set(car.big ? -6.4 : 5.9, 0, car.big ? z - laneIndex * 4.4 : z + 1.1);
       car.group.rotation.y = Math.PI;
     }
   }

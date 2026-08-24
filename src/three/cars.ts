@@ -105,20 +105,18 @@ export function createCar(color: CarColorName, scale = 1, silhouette: CarSilhoue
 
   const paintMaterial = new MeshPhysicalMaterial({
     color: bodyColor,
-    roughness: 0.14,
-    metalness: 0.38,
+    roughness: 0.18,
+    metalness: 0.16,
     clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    envMapIntensity: 1.2,
+    clearcoatRoughness: 0.12,
   });
   const accentMaterial = new MeshStandardMaterial({ color: bodyColor, roughness: 0.34 });
   const glassMaterial = new MeshPhysicalMaterial({
-    color: '#c4ecff',
+    color: '#d8f6ff',
     roughness: 0.05,
     metalness: 0.04,
     transparent: true,
-    opacity: 0.62,
-    envMapIntensity: 1.5,
+    opacity: 0.72,
   });
   const hubMaterial = new MeshStandardMaterial({ color: '#dfe7ec', metalness: 0.72, roughness: 0.24 });
   const headlightMaterial = new MeshStandardMaterial({ color: '#fffbe6', emissive: '#ffe27a', emissiveIntensity: 0.65 });

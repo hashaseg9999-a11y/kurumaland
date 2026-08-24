@@ -14,10 +14,10 @@ const GRAVITY = 13;
 const BONUS_DISTANCE = 5.2;
 const BONUS_DURATION_MS = 2600;
 const BALL_COLORS = ['#ef5350', '#42a5f5', '#ffca28', '#66bb6a', '#ab47bc', '#26c6da'];
-const POOL_MIN_X = -6.6;
-const POOL_MAX_X = 6.6;
-const POOL_MIN_Z = -9.5;
-const POOL_MAX_Z = 6.5;
+const POOL_MIN_X = -9.2;
+const POOL_MAX_X = 9.2;
+const POOL_MIN_Z = -11.5;
+const POOL_MAX_Z = 9.5;
 
 export class PoolGame implements GameModule {
   readonly id = 'ball-pool';
@@ -74,7 +74,7 @@ export class PoolGame implements GameModule {
     const material = new THREE.MeshStandardMaterial({ color: BALL_COLORS[index % BALL_COLORS.length]!, roughness: 0.24 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
-    mesh.position.set(-5 + Math.random() * 10, radius + Math.random() * 3, -4 + Math.random() * 8.5);
+    mesh.position.set(-7.5 + Math.random() * 15, radius + Math.random() * 3, -6 + Math.random() * 12);
     this.context.world.add(mesh);
     this.balls.push({ mesh, velocity: new THREE.Vector3(), radius, dragging: false });
   }
@@ -86,9 +86,43 @@ export class PoolGame implements GameModule {
     const centerZ = (POOL_MIN_Z + POOL_MAX_Z) / 2;
     const boundary = new THREE.Group();
 
+    const fenceGeometry = new THREE.BoxGeometry(0.18, 0.72, 0.18);
+    const railGeometry = new THREE.BoxGeometry(1, 0.12, 0.12);
+    const fenceMaterial = new THREE.MeshStandardMaterial({ color: '#8a5a3b', roughness: 0.78 });
+    const railMaterial = new THREE.MeshStandardMaterial({ color: '#a9744d', roughness: 0.72 });
+    const fencePosts: Array<[number, number, number, number]> = [
+      [POOL_MIN_X - 0.35, POOL_MIN_Z - 0.35, POOL_MAX_X - POOL_MIN_X + 0.7, 1],
+      [POOL_MIN_X - 0.35, POOL_MAX_Z + 0.35, POOL_MAX_X - POOL_MIN_X + 0.7, 1],
+      [POOL_MIN_X - 0.35, POOL_MIN_Z - 0.35, POOL_MAX_Z - POOL_MIN_Z + 0.7, 0],
+      [POOL_MAX_X + 0.35, POOL_MIN_Z - 0.35, POOL_MAX_Z - POOL_MIN_Z + 0.7, 0],
+    ];
+    for (const [startX, startZ, length, horizontal] of fencePosts) {
+      const count = Math.max(2, Math.round(length / 2.2) + 1);
+      for (let index = 0; index < count; index++) {
+        const post = new THREE.Mesh(fenceGeometry, fenceMaterial);
+        const ratio = count === 1 ? 0 : index / (count - 1);
+        post.position.set(
+          horizontal ? startX + ratio * length : startX,
+          0.36,
+          horizontal ? startZ : startZ + ratio * length,
+        );
+        post.castShadow = true;
+        boundary.add(post);
+      }
+      const rail = new THREE.Mesh(railGeometry, railMaterial);
+      rail.scale.set(horizontal ? length : 1, 1, horizontal ? 1 : length);
+      rail.position.set(
+        horizontal ? startX + length / 2 : startX,
+        0.66,
+        horizontal ? startZ : startZ + length / 2,
+      );
+      rail.castShadow = true;
+      boundary.add(rail);
+    }
+
     const outer = new THREE.Mesh(
       new THREE.ShapeGeometry(this.createRoundedRectangle(width + 0.44, depth + 0.44, 0.72), 10),
-      new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.82 }),
+      new THREE.MeshStandardMaterial({ color: '#7cbf68', roughness: 0.88 }),
     );
     outer.rotation.x = -Math.PI / 2;
     outer.position.set(0, 0.02, centerZ);
@@ -96,7 +130,7 @@ export class PoolGame implements GameModule {
 
     const inner = new THREE.Mesh(
       new THREE.ShapeGeometry(this.createRoundedRectangle(width, depth, 0.58), 10),
-      new THREE.MeshStandardMaterial({ color: '#dff0ff', roughness: 0.92 }),
+      new THREE.MeshStandardMaterial({ color: '#8fd07a', roughness: 0.92 }),
     );
     inner.rotation.x = -Math.PI / 2;
     inner.position.set(0, 0.045, centerZ);
