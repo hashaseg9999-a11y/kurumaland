@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 interface Ball3D {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -14,10 +14,10 @@ const GRAVITY = 13;
 const BONUS_DISTANCE = 5.2;
 const BONUS_DURATION_MS = 2600;
 const BALL_COLORS = ['#ef5350', '#42a5f5', '#ffca28', '#66bb6a', '#ab47bc', '#26c6da'];
-const POOL_MIN_X = -5.2;
-const POOL_MAX_X = 5.2;
-const POOL_MIN_Z = -7;
-const POOL_MAX_Z = 4.2;
+const POOL_MIN_X = -9.2;
+const POOL_MAX_X = 9.2;
+const POOL_MIN_Z = -11.5;
+const POOL_MAX_Z = 9.5;
 
 export class PoolGame implements GameModule {
   readonly id = 'ball-pool';
@@ -33,12 +33,16 @@ export class PoolGame implements GameModule {
   private nextBonusPulseAt = 0;
   private bonusTimeout?: number;
   private boundary?: THREE.Group;
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'ぼーるぷーる');
     this.hud.setProgress(0, 0);
     context.world.setCameraPreset('pool');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     this.createBoundary();
     for (let i = 0; i < 10; i++) this.createBall(i);
     this.cleanup.push(
@@ -51,6 +55,10 @@ export class PoolGame implements GameModule {
     for (const off of this.cleanup) off();
     this.hud?.dispose();
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     if (this.boundary) removeAndDispose(this.boundary);
     this.boundary = undefined;
     for (const ball of this.balls) removeAndDispose(ball.mesh);
@@ -66,7 +74,7 @@ export class PoolGame implements GameModule {
     const material = new THREE.MeshStandardMaterial({ color: BALL_COLORS[index % BALL_COLORS.length]!, roughness: 0.24 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
-    mesh.position.set(-4 + Math.random() * 8, radius + Math.random() * 3, -3 + Math.random() * 6.2);
+    mesh.position.set(-7.5 + Math.random() * 15, radius + Math.random() * 3, -6 + Math.random() * 12);
     this.context.world.add(mesh);
     this.balls.push({ mesh, velocity: new THREE.Vector3(), radius, dragging: false });
   }
@@ -78,9 +86,43 @@ export class PoolGame implements GameModule {
     const centerZ = (POOL_MIN_Z + POOL_MAX_Z) / 2;
     const boundary = new THREE.Group();
 
+    const fenceGeometry = new THREE.BoxGeometry(0.18, 0.72, 0.18);
+    const railGeometry = new THREE.BoxGeometry(1, 0.12, 0.12);
+    const fenceMaterial = new THREE.MeshStandardMaterial({ color: '#8a5a3b', roughness: 0.78 });
+    const railMaterial = new THREE.MeshStandardMaterial({ color: '#a9744d', roughness: 0.72 });
+    const fencePosts: Array<[number, number, number, number]> = [
+      [POOL_MIN_X - 0.35, POOL_MIN_Z - 0.35, POOL_MAX_X - POOL_MIN_X + 0.7, 1],
+      [POOL_MIN_X - 0.35, POOL_MAX_Z + 0.35, POOL_MAX_X - POOL_MIN_X + 0.7, 1],
+      [POOL_MIN_X - 0.35, POOL_MIN_Z - 0.35, POOL_MAX_Z - POOL_MIN_Z + 0.7, 0],
+      [POOL_MAX_X + 0.35, POOL_MIN_Z - 0.35, POOL_MAX_Z - POOL_MIN_Z + 0.7, 0],
+    ];
+    for (const [startX, startZ, length, horizontal] of fencePosts) {
+      const count = Math.max(2, Math.round(length / 2.2) + 1);
+      for (let index = 0; index < count; index++) {
+        const post = new THREE.Mesh(fenceGeometry, fenceMaterial);
+        const ratio = count === 1 ? 0 : index / (count - 1);
+        post.position.set(
+          horizontal ? startX + ratio * length : startX,
+          0.36,
+          horizontal ? startZ : startZ + ratio * length,
+        );
+        post.castShadow = true;
+        boundary.add(post);
+      }
+      const rail = new THREE.Mesh(railGeometry, railMaterial);
+      rail.scale.set(horizontal ? length : 1, 1, horizontal ? 1 : length);
+      rail.position.set(
+        horizontal ? startX + length / 2 : startX,
+        0.66,
+        horizontal ? startZ : startZ + length / 2,
+      );
+      rail.castShadow = true;
+      boundary.add(rail);
+    }
+
     const outer = new THREE.Mesh(
       new THREE.ShapeGeometry(this.createRoundedRectangle(width + 0.44, depth + 0.44, 0.72), 10),
-      new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.82 }),
+      new THREE.MeshStandardMaterial({ color: '#7cbf68', roughness: 0.88 }),
     );
     outer.rotation.x = -Math.PI / 2;
     outer.position.set(0, 0.02, centerZ);
@@ -88,7 +130,7 @@ export class PoolGame implements GameModule {
 
     const inner = new THREE.Mesh(
       new THREE.ShapeGeometry(this.createRoundedRectangle(width, depth, 0.58), 10),
-      new THREE.MeshStandardMaterial({ color: '#dff0ff', roughness: 0.92 }),
+      new THREE.MeshStandardMaterial({ color: '#8fd07a', roughness: 0.92 }),
     );
     inner.rotation.x = -Math.PI / 2;
     inner.position.set(0, 0.045, centerZ);
@@ -179,7 +221,11 @@ export class PoolGame implements GameModule {
     const direction = vector.sub(this.context.world.camera.position).normalize();
     const distance = -(this.context.world.camera.position.y - ball.radius) / direction.y;
     const point = this.context.world.camera.position.clone().add(direction.multiplyScalar(distance));
-    ball.mesh.position.set(THREE.MathUtils.clamp(point.x, -5.2, 5.2), Math.max(ball.radius, point.y), THREE.MathUtils.clamp(point.z, -7, 4.2));
+    ball.mesh.position.set(
+      THREE.MathUtils.clamp(point.x, POOL_MIN_X, POOL_MAX_X),
+      Math.max(ball.radius, point.y),
+      THREE.MathUtils.clamp(point.z, POOL_MIN_Z, POOL_MAX_Z),
+    );
   }
 
   private triggerBonus(): void {
@@ -192,6 +238,14 @@ export class PoolGame implements GameModule {
     this.context.sfx('chime');
     this.context.speak('やったー！ ボーナス！');
     this.context.complete();
+    const draggedBall = this.balls.find((ball) => ball.dragging);
+    if (draggedBall) {
+      this.particles?.burst(
+        { x: draggedBall.mesh.position.x, y: draggedBall.mesh.position.y + 0.4, z: draggedBall.mesh.position.z },
+        { count: 18 },
+      );
+    }
+    this.cameraPulse?.trigger();
     for (const ball of this.balls) {
       if (ball.dragging) continue;
       ball.velocity.x += (Math.random() - 0.5) * 7;
@@ -201,21 +255,31 @@ export class PoolGame implements GameModule {
 
   private update(delta: number): void {
     const time = performance.now();
+    this.particles?.update(delta);
+    this.cameraPulse?.update(delta);
     for (const ball of this.balls) {
       if (!ball.dragging) {
         ball.velocity.y -= GRAVITY * delta;
+        ball.velocity.x *= 1 - Math.min(0.6, delta * 0.35);
+        ball.velocity.z *= 1 - Math.min(0.6, delta * 0.35);
         ball.mesh.position.addScaledVector(ball.velocity, delta);
         if (ball.mesh.position.y < ball.radius) {
           ball.mesh.position.y = ball.radius;
-          ball.velocity.y = Math.abs(ball.velocity.y) * 0.72;
+          ball.velocity.y = Math.abs(ball.velocity.y) * 0.66;
           if (Math.abs(ball.velocity.y) > 1.2) this.context?.sfx('pop');
+          if (Math.abs(ball.velocity.y) > 2.2 && this.particles) {
+            this.particles.burst(
+              { x: ball.mesh.position.x, y: 0.25, z: ball.mesh.position.z },
+              { count: 5 },
+            );
+          }
         }
-        if (Math.abs(ball.mesh.position.x) > 5.2) {
-          ball.mesh.position.x = Math.sign(ball.mesh.position.x) * 5.2;
+        if (Math.abs(ball.mesh.position.x) > POOL_MAX_X) {
+          ball.mesh.position.x = Math.sign(ball.mesh.position.x) * POOL_MAX_X;
           ball.velocity.x *= -0.72;
         }
-        if (ball.mesh.position.z > 4.2) { ball.mesh.position.z = 4.2; ball.velocity.z *= -0.72; }
-        if (ball.mesh.position.z < -7) { ball.mesh.position.z = -7; ball.velocity.z *= -0.72; }
+        if (ball.mesh.position.z > POOL_MAX_Z) { ball.mesh.position.z = POOL_MAX_Z; ball.velocity.z *= -0.72; }
+        if (ball.mesh.position.z < POOL_MIN_Z) { ball.mesh.position.z = POOL_MIN_Z; ball.velocity.z *= -0.72; }
       }
     }
     if (Date.now() < this.bonusUntil && time >= this.nextBonusPulseAt) {
@@ -224,6 +288,46 @@ export class PoolGame implements GameModule {
         if (ball.dragging || Math.random() < 0.25) continue;
         ball.velocity.y = 7 + Math.random() * 5;
         ball.velocity.x += (Math.random() - 0.5) * 3;
+      }
+    }
+
+    // Ball-to-ball elastic collisions (simple impulse exchange).
+    for (let a = 0; a < this.balls.length; a += 1) {
+      const first = this.balls[a]!;
+      for (let b = a + 1; b < this.balls.length; b += 1) {
+        const second = this.balls[b]!;
+        const deltaPosition = second.mesh.position.clone().sub(first.mesh.position);
+        const distance = deltaPosition.length();
+        const minDistance = first.radius + second.radius;
+        if (distance >= minDistance || distance === 0) continue;
+        const normal = deltaPosition.divideScalar(distance);
+        const overlap = minDistance - distance;
+        const firstStatic = first.dragging;
+        const secondStatic = second.dragging;
+        if (!firstStatic && !secondStatic) {
+          first.mesh.position.addScaledVector(normal, -overlap / 2);
+          second.mesh.position.addScaledVector(normal, overlap / 2);
+        } else if (firstStatic && !secondStatic) {
+          second.mesh.position.addScaledVector(normal, overlap);
+        } else if (!firstStatic && secondStatic) {
+          first.mesh.position.addScaledVector(normal, -overlap);
+        }
+        const relativeVelocity = second.velocity.clone().sub(first.velocity);
+        const separatingSpeed = relativeVelocity.dot(normal);
+        if (separatingSpeed >= 0) continue;
+        const impulseMagnitude = -separatingSpeed * 0.5;
+        if (!firstStatic) first.velocity.addScaledVector(normal, -impulseMagnitude * 0.78);
+        if (!secondStatic) second.velocity.addScaledVector(normal, impulseMagnitude * 0.78);
+        if (Math.abs(separatingSpeed) > 2.4 && this.particles) {
+          this.particles.burst(
+            {
+              x: first.mesh.position.x + normal.x * first.radius,
+              y: Math.max(0.3, (first.mesh.position.y + second.mesh.position.y) / 2),
+              z: first.mesh.position.z + normal.z * first.radius,
+            },
+            { count: 4 },
+          );
+        }
       }
     }
   }

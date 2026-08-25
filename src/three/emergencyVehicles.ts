@@ -4,6 +4,7 @@ import {
   Group,
   Mesh,
   MeshPhysicalMaterial,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PointLight,
   SphereGeometry,
@@ -75,30 +76,55 @@ const SPECS: Record<EmergencyVehicleType, VehicleSpec> = {
 
 function createWheel(rimColor = '#dfe7ec'): Group {
   const wheel = new Group();
-  const tyreGeometry = new CylinderGeometry(0.41, 0.41, 0.29, 24);
-  const sideGeometry = new CylinderGeometry(0.425, 0.425, 0.055, 24);
+  const tyreGeometry = new CylinderGeometry(0.41, 0.41, 0.29, 28);
+  const sideGeometry = new CylinderGeometry(0.43, 0.43, 0.06, 28);
+  const sidewallGeometry = new TorusGeometry(0.412, 0.036, 8, 28);
   const rimGeometry = new CylinderGeometry(0.21, 0.21, 0.31, 18);
-  const spokeGeometry = new BoxGeometry(0.34, 0.28, 0.08);
-  const tyreMaterial = new MeshStandardMaterial({ color: '#2b3238', roughness: 0.82 });
-  const tyreSideMaterial = new MeshStandardMaterial({ color: '#465158', roughness: 0.68 });
-  const rimMaterial = new MeshStandardMaterial({ color: rimColor, metalness: 0.7, roughness: 0.22 });
+  const spokeGeometry = new RoundedBoxGeometry(0.36, 0.29, 0.085, 2, 0.03);
+  const caliperGeometry = new RoundedBoxGeometry(0.1, 0.2, 0.14, 2, 0.03);
+  const tyreMaterial = new MeshStandardMaterial({ color: '#23282d', roughness: 0.88 });
+  const tyreSideMaterial = new MeshStandardMaterial({ color: '#3c444b', roughness: 0.72 });
+  const rimMaterial = new MeshStandardMaterial({ color: rimColor, metalness: 0.85, roughness: 0.16 });
+  const caliperMaterial = new MeshStandardMaterial({
+    color: '#e05a4e',
+    metalness: 0.35,
+    roughness: 0.38,
+  });
   const tyre = new Mesh(tyreGeometry, tyreMaterial);
   const leftTyreSide = new Mesh(sideGeometry, tyreSideMaterial);
   const rightTyreSide = new Mesh(sideGeometry.clone(), tyreSideMaterial);
+  const leftSidewall = new Mesh(sidewallGeometry, tyreSideMaterial);
+  const rightSidewall = new Mesh(sidewallGeometry.clone(), tyreSideMaterial);
   const rim = new Mesh(rimGeometry, rimMaterial);
   const spoke = new Mesh(spokeGeometry, rimMaterial);
   const crossSpoke = new Mesh(spokeGeometry.clone(), rimMaterial);
+  const caliper = new Mesh(caliperGeometry, caliperMaterial);
   for (const item of [tyre, leftTyreSide, rightTyreSide, rim]) {
     item.rotation.z = Math.PI / 2;
   }
+  leftSidewall.rotation.y = Math.PI / 2;
+  rightSidewall.rotation.y = Math.PI / 2;
+  leftSidewall.position.x = 0.13;
+  rightSidewall.position.x = -0.13;
   crossSpoke.rotation.x = Math.PI / 2;
+  caliper.position.set(0, 0.21, 0.15);
   leftTyreSide.position.x = 0.125;
   rightTyreSide.position.x = -0.125;
   tyre.castShadow = true;
   rim.castShadow = true;
-  wheel.add(tyre, leftTyreSide, rightTyreSide, rim, spoke, crossSpoke);
+  wheel.add(tyre, leftTyreSide, rightTyreSide, leftSidewall, rightSidewall,
+    rim, spoke, crossSpoke, caliper);
   wheel.userData.isEmergencyWheel = true;
   return wheel;
+}
+
+function createWheelArch(): Mesh<TorusGeometry, MeshStandardMaterial> {
+  const arch = new Mesh(
+    new TorusGeometry(0.51, 0.06, 8, 18, Math.PI),
+    new MeshStandardMaterial({ color: '#000000', roughness: 0.55 }),
+  );
+  arch.rotation.y = Math.PI / 2;
+  return arch;
 }
 
 export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVehicleParts {
@@ -112,10 +138,11 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
 
   const paintMaterial = new MeshPhysicalMaterial({
     color: spec.bodyColor,
-    roughness: 0.2,
-    metalness: 0.12,
+    roughness: 0.14,
+    metalness: 0.35,
     clearcoat: 1,
-    clearcoatRoughness: 0.14,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 1.2,
   });
   const secondaryMaterial = new MeshPhysicalMaterial({
     color: spec.secondaryColor,
@@ -125,11 +152,12 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   });
   const roofMaterial = new MeshPhysicalMaterial({ color: spec.roofColor, roughness: 0.3, clearcoat: 0.6 });
   const glassMaterial = new MeshPhysicalMaterial({
-    color: '#d8f6ff',
+    color: '#c4ecff',
     roughness: 0.05,
     metalness: 0.04,
     transparent: true,
-    opacity: 0.7,
+    opacity: 0.6,
+    envMapIntensity: 1.5,
   });
   const stripeMaterial = new MeshStandardMaterial({ color: spec.stripeColor, roughness: 0.36 });
   const darkDetailMaterial = new MeshStandardMaterial({ color: '#263238', roughness: 0.3 });
@@ -217,7 +245,33 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     const spotlight = new Mesh(spotlightBodyGeometry, chromeMaterial);
     spotlight.rotation.z = Math.PI / 2;
     spotlight.position.set(0.93, 1.72, 0.62);
-    group.add(antenna, hoodStripe, spotlightArm, spotlight);
+
+    // Segmented lightbar on roof (red/blue/white/red/blue segments)
+    const lightbarSegmentGeometry = new RoundedBoxGeometry(0.16, 0.12, 0.22, 2, 0.03);
+    const segmentColors: ReadonlyArray<string> = ['#ff1744', '#2979ff', '#ffffff', '#ff1744', '#2979ff'];
+    for (let i = 0; i < segmentColors.length; i++) {
+      const segMat = new MeshStandardMaterial({
+        color: segmentColors[i]!,
+        emissive: segmentColors[i]!,
+        emissiveIntensity: 0.4,
+      });
+      const segment = new Mesh(lightbarSegmentGeometry.clone(), segMat);
+      segment.position.set((i - 2) * 0.19, 2.44, 0.15);
+      group.add(segment);
+    }
+
+    // Push bar on front bumper
+    const pushBarFrameGeometry = new RoundedBoxGeometry(1.2, 0.18, 0.05, 2, 0.02);
+    const pushBarVerticalGeometry = new RoundedBoxGeometry(0.05, 0.24, 0.05, 2, 0.02);
+    const pushBarHorizontal = new Mesh(pushBarFrameGeometry, trimMaterial);
+    pushBarHorizontal.position.set(0, 0.78, 1.66);
+    for (const bx of [-0.45, 0, 0.45]) {
+      const pushBarVertical = new Mesh(pushBarVerticalGeometry, trimMaterial);
+      pushBarVertical.position.set(bx!, 0.68, 1.66);
+      group.add(pushBarVertical);
+    }
+
+    group.add(antenna, hoodStripe, spotlightArm, spotlight, pushBarHorizontal);
   }
 
   if (spec.stripe === 'horizontal') {
@@ -234,20 +288,20 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
   }
 
   if (spec.cross) {
-    const barGeometry = new BoxGeometry(0.76, 0.03, 0.24);
+    const barGeometry = new BoxGeometry(0.05, 0.5, 0.76);
     const crossMaterial = new MeshStandardMaterial({ color: '#e53935', roughness: 0.3 });
     for (const side of [-0.82, 0.82]) {
       const barH = new Mesh(barGeometry, crossMaterial);
-      barH.position.set(side!, 1.05, 0.1);
+      barH.position.set(side!, 1.42, 0.15);
       const barV = new Mesh(barGeometry, crossMaterial);
-      barV.position.set(side!, 1.05, 0.1);
+      barV.position.set(side!, 1.42, 0.15);
       barV.rotation.y = Math.PI / 2;
       group.add(barH, barV);
     }
   }
 
   if (spec.ladder) {
-    const railGeometry = new BoxGeometry(0.08, 0.08, 2.5);
+    const railGeometry = new RoundedBoxGeometry(0.09, 0.09, 2.5, 2, 0.03);
     const rungGeometry = new RoundedBoxGeometry(0.66, 0.07, 0.09, 2, 0.03);
     const metalMaterial = new MeshStandardMaterial({ color: '#b0bec5', metalness: 0.62, roughness: 0.24 });
     for (const x of [-0.28, 0.28]) {
@@ -263,7 +317,25 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     const ladderBaseGeometry = new BoxGeometry(0.78, 0.08, 2.62);
     const ladderBase = new Mesh(ladderBaseGeometry, trimMaterial);
     ladderBase.position.set(0, 2.19, 0.28);
+
+    // Support struts connecting base to rails
+    const strutGeometry = new RoundedBoxGeometry(0.06, 0.14, 0.06, 2, 0.02);
+    for (const x of [-0.28, 0.28]) {
+      const frontStrut = new Mesh(strutGeometry, metalMaterial);
+      frontStrut.position.set(x!, 2.22, -0.85);
+      const rearStrut = new Mesh(strutGeometry, metalMaterial);
+      rearStrut.position.set(x!, 2.22, 1.41);
+      group.add(frontStrut, rearStrut);
+    }
+
+    // Water cannon on the roof
+    const waterCannonBase = new Mesh(new CylinderGeometry(0.06, 0.07, 0.12, 10), darkDetailMaterial);
+    waterCannonBase.position.set(0.42, 2.25, 0.7);
+    const waterCannonBarrel = new Mesh(new CylinderGeometry(0.045, 0.055, 0.3, 10), chromeMaterial);
+    waterCannonBarrel.rotation.x = Math.PI / 6;
+    waterCannonBarrel.position.set(0.42, 2.38, 0.72);
     group.add(ladderBase);
+    group.add(waterCannonBase, waterCannonBarrel);
   }
 
   const beaconBaseGeometry = new BoxGeometry(0.92, 0.16, 0.38);
@@ -321,6 +393,9 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     const wheel = createWheel(spec.wheelRimColor);
     wheel.position.set(x!, 0.4, z!);
     group.add(wheel);
+    const arch = createWheelArch();
+    arch.position.set(x!, 0.4, z!);
+    group.add(arch);
   }
 
   const headlightGeometry = new RoundedBoxGeometry(0.29, 0.19, 0.08, 2, 0.034);
@@ -354,24 +429,33 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
     group.add(fogLight);
   }
 
-  const faceGeometry = new SphereGeometry(0.16, 22, 22);
+  const faceGeometry = new SphereGeometry(0.19, 22, 22);
+  const highlightGeometry = new SphereGeometry(0.055, 10, 8);
   const eyeWhiteMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.22 });
   const pupilMaterial = new MeshStandardMaterial({ color: '#263238', roughness: 0.28 });
+  const highlightMaterial = new MeshBasicMaterial({ color: '#ffffff' });
   for (const x of [-0.34, 0.34]) {
     const eye = new Mesh(faceGeometry, eyeWhiteMaterial);
     eye.position.set(x!, 1.16, 1.57);
-    eye.scale.set(1, 1.06, 0.48);
+    eye.scale.set(1, 1.14, 0.48);
     const pupil = new Mesh(faceGeometry, pupilMaterial);
     pupil.position.set(x!, 1.17, 1.65);
-    pupil.scale.set(0.5, 0.52, 0.26);
-    group.add(eye, pupil);
+    pupil.scale.set(0.58, 0.6, 0.28);
+    const highlight = new Mesh(highlightGeometry, highlightMaterial);
+    highlight.position.set(x! + 0.05, 1.24, 1.7);
+    highlight.scale.set(1, 1, 0.5);
+    group.add(eye, pupil, highlight);
   }
-  const smileGeometry = new TorusGeometry(0.22, 0.05, 12, 24, Math.PI);
+  const smileGeometry = new TorusGeometry(0.25, 0.058, 12, 24, Math.PI);
   const smile = new Mesh(smileGeometry, pupilMaterial);
   smile.rotation.x = Math.PI / 2;
   smile.rotation.z = Math.PI;
   smile.position.set(0, 1.0, 1.57);
   group.add(smile);
+  const smileHighlight = new Mesh(new SphereGeometry(0.05, 10, 8), highlightMaterial);
+  smileHighlight.position.set(-0.11, 1.06, 1.65);
+  smileHighlight.scale.set(1, 0.7, 0.4);
+  group.add(smileHighlight);
 
   for (const x of [-0.62, 0.62]) {
     const cheek = new Mesh(new SphereGeometry(0.09, 12, 10), new MeshStandardMaterial({
@@ -380,8 +464,8 @@ export function createEmergencyVehicle(type: EmergencyVehicleType): EmergencyVeh
       emissiveIntensity: 0.16,
       roughness: 0.42,
     }));
-    cheek.position.set(x!, 0.96, 1.55);
-    cheek.scale.set(1, 0.78, 0.4);
+    cheek.position.set(x!, 0.94, 1.55);
+    cheek.scale.set(1.12, 0.84, 0.4);
     group.add(cheek);
   }
 

@@ -308,6 +308,31 @@ export const I18N_STRINGS = {
     th: 'เล่นต่อ',
     en: 'Resume Play',
   },
+  installBannerLabel: {
+    ja: 'ホーム画面に追加',
+    th: 'เพิ่มลงหน้าจอหลัก',
+    en: 'Add to Home Screen',
+  },
+  installBannerIos: {
+    ja: '共有 → ホーム画面に追加 で あぷりみたいに つかえるよ',
+    th: 'แชร์ → เพิ่มลงหน้าจอหลัก เพื่อใช้เหมือนแอป',
+    en: 'Share → Add to Home Screen to use it like an app',
+  },
+  installBannerGeneric: {
+    ja: 'ホーム画面に追加して あぷりみたいに つかえるよ',
+    th: 'เพิ่มลงหน้าจอหลักเพื่อใช้เหมือนแอป',
+    en: 'Add to Home Screen to use it like an app',
+  },
+  installBannerInstall: {
+    ja: '追加',
+    th: 'เพิ่ม',
+    en: 'Add',
+  },
+  installBannerClose: {
+    ja: '閉じる',
+    th: 'ปิด',
+    en: 'Close',
+  },
 } as const;
 
 export type I18nKey = keyof typeof I18N_STRINGS;

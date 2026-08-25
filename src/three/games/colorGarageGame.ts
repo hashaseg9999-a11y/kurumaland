@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CAR_COLORS, createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
-import { createGameHud } from '../gameHud';
+import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LABELS: Record<CarColorName, string> = { red: 'あか', blue: 'あお', yellow: 'きいろ', green: 'みどり' };
@@ -26,6 +26,7 @@ interface GarageVisual {
   group: THREE.Group;
   material: THREE.MeshStandardMaterial;
   bounceUntil?: number;
+  flashUntil?: number;
 }
 
 export class ColorGarageGame implements GameModule {
@@ -39,12 +40,17 @@ export class ColorGarageGame implements GameModule {
   private moveAttached = false;
   private resetTimer?: number;
   private garages: GarageVisual[] = [];
+  private lastFrameAt: number | null = null;
+  private particles: ReturnType<typeof createParticleBurst> | null = null;
+  private cameraPulse: ReturnType<typeof createCameraMicroPulse> | null = null;
 
   mount(context: GameContext): void {
     this.context = context;
     this.hud = createGameHud(context, 'いろの しゃこ');
     this.hud.setProgress(0, 4);
     context.world.setCameraPreset('garage');
+    this.particles = createParticleBurst(context.world);
+    this.cameraPulse = createCameraMicroPulse(context.world);
     for (const color of COLORS) this.buildGarage(color);
     for (const [index, color] of COLORS.entries()) {
       const group = createCar(color, 0.92);
@@ -61,6 +67,10 @@ export class ColorGarageGame implements GameModule {
   unmount(): void {
     for (const off of this.cleanup) off();
     this.hud?.dispose();
+    this.particles?.dispose();
+    this.cameraPulse?.dispose();
+    this.particles = null;
+    this.cameraPulse = null;
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
     for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
@@ -139,7 +149,12 @@ export class ColorGarageGame implements GameModule {
         item.group.position.set(LANES[item.color]!, 0, TARGET_Z + 0.25);
         item.rejectUntil = undefined;
         const garage = this.garages.find((visual) => visual.color === item.color);
-        if (garage) garage.bounceUntil = performance.now() + 480;
+        if (garage) {
+          garage.bounceUntil = performance.now() + 620;
+          garage.flashUntil = performance.now() + 560;
+        }
+        this.particles?.burst({ x: item.group.position.x, y: 1.1, z: item.group.position.z }, { count: 18 });
+        this.cameraPulse?.trigger();
         this.context.sfx('chime');
         this.context.speak(`${LABELS[item.color]}！`);
         this.context.complete();
@@ -191,6 +206,9 @@ export class ColorGarageGame implements GameModule {
     const targetColor = this.currentTarget();
     const pulse = THREE.MathUtils.clamp(0.12 + Math.sin(time * 2) * 0.165, 0.12, 0.45);
     const now = performance.now();
+    const delta = this.lastFrameAt === null ? 1 / 60 : Math.min(0.1, Math.max(0, (now - this.lastFrameAt) / 1000));
+    this.lastFrameAt = now;
+    this.particles?.update(delta);
     for (const garage of this.garages) {
       if (garage.bounceUntil !== undefined && now < garage.bounceUntil) {
         const progress = 1 - (garage.bounceUntil - now) / 480;
@@ -199,8 +217,11 @@ export class ColorGarageGame implements GameModule {
         garage.group.scale.y = 1;
         garage.bounceUntil = undefined;
       }
-      garage.material.emissiveIntensity = garage.color === targetColor ? pulse : 0.12;
+      const flashRemaining = garage.flashUntil !== undefined ? garage.flashUntil - now : 0;
+      const flashBoost = flashRemaining > 0 ? (flashRemaining / 560) * 2.6 : 0;
+      garage.material.emissiveIntensity = (garage.color === targetColor ? pulse : 0.12) + flashBoost;
     }
+    this.cameraPulse?.update(delta);
     for (const car of this.cars) {
       if (car.dragging) {
         car.group.rotation.z = Math.sin(time * 10) * 0.045;
@@ -208,6 +229,17 @@ export class ColorGarageGame implements GameModule {
         car.group.rotation.z = Math.sin(time * 24) * 0.07;
       } else {
         car.group.rotation.z = 0;
+      }
+    }
+    const draggedCar = this.dragged;
+    for (const garage of this.garages) {
+      const isDragTarget = draggedCar !== null && garage.color === draggedCar.color;
+      if (isDragTarget) {
+        garage.group.scale.x = THREE.MathUtils.lerp(garage.group.scale.x, 1.05, 0.18);
+        garage.group.scale.z = THREE.MathUtils.lerp(garage.group.scale.z, 1.05, 0.18);
+      } else {
+        garage.group.scale.x = THREE.MathUtils.lerp(garage.group.scale.x, 1, 0.18);
+        garage.group.scale.z = THREE.MathUtils.lerp(garage.group.scale.z, 1, 0.18);
       }
     }
   }
