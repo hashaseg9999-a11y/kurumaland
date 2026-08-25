@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['app_icon.png'],
       workbox: {
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,mp3}'],
         navigateFallback: 'index.html',
       },
       manifest: {

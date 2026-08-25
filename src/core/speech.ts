@@ -1,5 +1,5 @@
 import type { Settings } from './settings';
-import { VOCAB, type VocabKey } from './vocab';
+import type { VocabKey } from './vocab';
 
 export type Lang = 'ja' | 'en' | 'th';
 export type LangMode = Lang | 'rotate';
@@ -13,186 +13,161 @@ export interface SpeechService {
 }
 
 const ROTATING_LANGUAGES = ['ja', 'en', 'th'] as const satisfies readonly Lang[];
-const LANGUAGE_TAGS: Readonly<Record<Lang, string>> = {
-  ja: 'ja-JP',
-  en: 'en-US',
-  th: 'th-TH',
+
+/** 3Dゲーム等から渡される直接フレーズ → 生成済み音声キーへの写像。 */
+const PHRASE_TO_AUDIO_KEY: Readonly<Record<string, string>> = {
+  'あお！ しょうぼうしゃ、ごー！': 'phrase_go_fire_truck',
+  'あお！ きゅうきゅうしゃ、ごー！': 'phrase_go_ambulance',
+  'あお！ ぱとかー、ごー！': 'phrase_go_police_car',
+  'あか！ とまれ！': 'phrase_stop',
+  'よくできたね！': 'phrase_yokudekita',
+  'おおきい！': 'phrase_ookii',
+  'ちいさい！': 'phrase_chiisai',
+  'あかい くるま！': 'phrase_akai_kuruma',
+  'あおい くるま！': 'phrase_aoi_kuruma',
+  'きいろい くるま！': 'phrase_kiiroi_kuruma',
+  'みどりの くるま！': 'phrase_midori_kuruma',
+  'あか！': 'phrase_akai',
+  'あお！': 'phrase_ao',
+  'きいろ！': 'phrase_kiiroi',
+  'みどり！': 'phrase_midori',
+  'れっしゃ しゅっぱつ！': 'phrase_ressha_shuppatsu',
+  'やったー！ ボーナス！': 'phrase_bonus',
 };
-const SPEECH_RATE = 0.9;
 
-function normalizeLanguageTag(tag: string): string {
-  return tag.trim().replaceAll('_', '-').toLowerCase();
-}
+const AUDIO_BASE = new URL('audio/', document.baseURI).href;
 
-class WebSpeechService implements SpeechService {
-  private readonly synthesis: SpeechSynthesis | null;
-  private voices: SpeechSynthesisVoice[] = [];
+class PreRenderedSpeechService implements SpeechService {
+  private audioContext: AudioContext | null = null;
+  private readonly buffers = new Map<string, AudioBuffer | null>();
+  private readonly pending = new Map<string, Promise<AudioBuffer | null>>();
   private unlocked = false;
   private rotateIndex = 0;
   private previousMode: LangMode | null = null;
 
-  constructor(private readonly settings: Settings) {
-    this.synthesis =
-      typeof window !== 'undefined' && 'speechSynthesis' in window
-        ? window.speechSynthesis
-        : null;
-
-    if (!this.synthesis) {
-      return;
-    }
-
-    this.refreshVoices();
-    if (typeof this.synthesis.addEventListener === 'function') {
-      this.synthesis.addEventListener('voiceschanged', this.handleVoicesChanged);
-    }
-  }
+  constructor(private readonly settings: Settings) {}
 
   speak(key: VocabKey): void {
-    if (
-      !this.unlocked ||
-      !this.synthesis ||
-      typeof SpeechSynthesisUtterance === 'undefined'
-    ) {
-      return;
-    }
-
-    const words = VOCAB[key];
-    if (!words) {
-      return;
-    }
-
-    const lang = this.resolveLanguage();
-    const languageTag = LANGUAGE_TAGS[lang];
-
-    try {
-      this.synthesis.cancel();
-    } catch {
-      return;
-    }
-
-    this.refreshVoices();
-    const voice = this.findVoice(languageTag);
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(words[lang]);
-      utterance.lang = languageTag;
-      utterance.rate = SPEECH_RATE;
-      utterance.pitch = 1.15;
-      if (voice) {
-        utterance.voice = voice;
-      }
-      this.synthesis.speak(utterance);
-    } catch {
-      // 音声APIが不安定な環境でも、遊び自体は止めない。
-    }
+    this.playVocab(key);
   }
 
   speakDirect(japaneseText: string): void {
-    if (!this.unlocked || !this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
-    try { this.synthesis.cancel(); } catch { return; }
-    const utterance = new SpeechSynthesisUtterance(japaneseText);
-    utterance.lang = 'ja-JP';
-    utterance.rate = SPEECH_RATE;
-    utterance.pitch = 1.15;
-    const voice = this.findVoice('ja-JP');
-    if (voice) utterance.voice = voice;
-    this.synthesis.speak(utterance);
+    const audioKey = PHRASE_TO_AUDIO_KEY[japaneseText];
+    if (audioKey) {
+      this.playVocab(audioKey);
+      return;
+    }
+    // 未生成フレーズは無音でスキップ（子ども向けアプリのため失敗状態を作らない）。
+  }
+
+  unlock(): void {
+    if (this.unlocked) return;
+    this.unlocked = true;
+    const context = this.getContext();
+    if (!context) return;
+    if (context.state === 'running') return;
+    void context.resume().catch(() => undefined);
   }
 
   getLanguage(): Lang {
     const mode = this.settings.langMode;
     if (mode !== 'rotate') {
-      return mode;
-    }
-    return ROTATING_LANGUAGES[this.rotateIndex] ?? 'ja';
-  }
-
-  unlock(): void {
-    if (this.unlocked) {
-      return;
-    }
-
-    // unlock前に依頼された発話は保持せず、ここから先の発話だけを受け付ける。
-    this.unlocked = true;
-
-    if (!this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      return;
-    }
-
-    try {
-      this.refreshVoices();
-      const utterance = new SpeechSynthesisUtterance(' ');
-      const languageTag = LANGUAGE_TAGS.ja;
-      const voice = this.findVoice(languageTag);
-      utterance.lang = languageTag;
-      utterance.volume = 0;
-      utterance.rate = SPEECH_RATE;
-      if (voice) {
-        utterance.voice = voice;
-      }
-      this.synthesis.speak(utterance);
-    } catch {
-      // iOS等で無音発話に失敗しても、例外を画面へ伝播させない。
-    }
-  }
-
-  private readonly handleVoicesChanged = (): void => {
-    this.refreshVoices();
-  };
-
-  private refreshVoices(): void {
-    if (!this.synthesis) {
-      this.voices = [];
-      return;
-    }
-
-    try {
-      this.voices = this.synthesis.getVoices();
-    } catch {
-      this.voices = [];
-    }
-  }
-
-  private findVoice(languageTag: string): SpeechSynthesisVoice | undefined {
-    const normalizedTarget = normalizeLanguageTag(languageTag);
-    const exactMatch = this.voices.find(
-      (voice) => normalizeLanguageTag(voice.lang) === normalizedTarget,
-    );
-    if (exactMatch) {
-      return exactMatch;
-    }
-
-    const baseLanguage = normalizedTarget.split('-')[0];
-    if (!baseLanguage) {
-      return undefined;
-    }
-    return this.voices.find((voice) => {
-      const normalizedVoiceLanguage = normalizeLanguageTag(voice.lang);
-      return (
-        normalizedVoiceLanguage === baseLanguage ||
-        normalizedVoiceLanguage.startsWith(baseLanguage + '-')
-      );
-    });
-  }
-
-  private resolveLanguage(): Lang {
-    const mode = this.settings.langMode;
-    if (mode !== 'rotate') {
       this.previousMode = mode;
       return mode;
     }
-
     if (this.previousMode !== 'rotate') {
       this.rotateIndex = 0;
     }
-
     const language = ROTATING_LANGUAGES[this.rotateIndex] ?? 'ja';
     this.rotateIndex = (this.rotateIndex + 1) % ROTATING_LANGUAGES.length;
     this.previousMode = mode;
     return language;
   }
+
+  private playVocab(audioKey: string): void {
+    if (!this.unlocked) return;
+    const lang = this.getLanguage();
+    const cacheKey = lang + '/' + audioKey;
+    const context = this.getContext();
+    if (!context) return;
+
+    const start = (buffer: AudioBuffer | null): void => {
+      if (!buffer || context.state !== 'running') return;
+      this.stopCurrent();
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      source.onended = () => {
+        if (this.currentSource === source) this.currentSource = null;
+      };
+      source.start();
+      this.currentSource = source;
+    };
+
+    const buffered = this.buffers.get(cacheKey);
+    if (buffered !== undefined) {
+      start(buffered);
+      return;
+    }
+
+    const pendingLoad = this.pending.get(cacheKey);
+    if (pendingLoad) {
+      void pendingLoad.then(start);
+      return;
+    }
+
+    const load = this.loadBuffer(context, cacheKey);
+    this.pending.set(cacheKey, load);
+    void load
+      .then((buffer) => {
+        start(buffer);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.pending.delete(cacheKey);
+      });
+  }
+
+  private currentSource: AudioBufferSourceNode | null = null;
+
+  private stopCurrent(): void {
+    if (!this.currentSource) return;
+    try {
+      this.currentSource.stop();
+    } catch {
+      // already stopped
+    }
+    this.currentSource = null;
+  }
+
+  private async loadBuffer(context: AudioContext, cacheKey: string): Promise<AudioBuffer | null> {
+    const url = AUDIO_BASE + cacheKey + '.mp3';
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        this.buffers.set(cacheKey, null);
+        return null;
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = await context.decodeAudioData(arrayBuffer);
+      this.buffers.set(cacheKey, buffer);
+      return buffer;
+    } catch {
+      this.buffers.set(cacheKey, null);
+      return null;
+    }
+  }
+
+  private getContext(): AudioContext | null {
+    if (this.audioContext) return this.audioContext;
+    if (typeof window === 'undefined') return null;
+    const AudioCtx = window.AudioContext;
+    if (!AudioCtx) return null;
+    this.audioContext = new AudioCtx();
+    return this.audioContext;
+  }
 }
 
 export function createSpeechService(settings: Settings): SpeechService {
-  return new WebSpeechService(settings);
+  return new PreRenderedSpeechService(settings);
 }
