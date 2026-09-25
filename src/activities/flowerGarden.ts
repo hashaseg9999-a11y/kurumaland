@@ -197,7 +197,6 @@ class FlowerGardenActivity implements Activity {
     this.stage = stage;
     this.particles = new ParticleSystem(stage);
     context.speech.speak('flower');
-    context.notifyTaskComplete();
     stage.addEventListener('pointerdown', (event) => this.handleTap(event), {
       signal: this.listeners.signal,
     });

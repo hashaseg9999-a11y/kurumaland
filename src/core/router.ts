@@ -4,6 +4,7 @@ import carGreen from '../assets/car_green.svg';
 import carRed from '../assets/car_red.svg';
 import garageBlue from '../assets/garage_blue.svg';
 import type { Activity } from './activity';
+import { installParentalGate } from './gate';
 import { getI18nText, type I18nKey } from './i18n';
 import type { Settings } from './settings';
 import { attachParallax, createSceneStage, playSceneTransition } from './scene3d';
@@ -33,6 +34,7 @@ interface ActivityRouterOptions {
   getSettings: () => Settings;
   onSettingsChange?: (settings: Readonly<Settings>) => void;
   onTaskComplete(): void;
+  onEndingResume?(): void;
 }
 
 export class ActivityRouter {
@@ -42,10 +44,12 @@ export class ActivityRouter {
   private readonly sfx: SfxService;
   private readonly getSettings: () => Settings;
   private readonly onTaskComplete: () => void;
+  private readonly onEndingResume: (() => void) | null;
   private currentActivity: Activity | null = null;
   private transitioning = false;
   private menuEffectsCleanup: (() => void) | null = null;
   private activityEffectsCleanup: (() => void) | null = null;
+  private endingGateCleanup: (() => void) | null = null;
   private ending = false;
 
   constructor(options: ActivityRouterOptions) {
@@ -55,6 +59,7 @@ export class ActivityRouter {
     this.sfx = options.sfx;
     this.getSettings = options.getSettings;
     this.onTaskComplete = options.onTaskComplete;
+    this.onEndingResume = options.onEndingResume ?? null;
   }
 
   get isShowingEnding(): boolean {
@@ -69,6 +74,7 @@ export class ActivityRouter {
     if (this.transitioning) return;
     this.transitioning = true;
     this.unmountCurrentActivity();
+    this.clearEndingGate();
     this.ending = false;
     this.clearScreenEffects();
     this.root.replaceChildren();
@@ -151,6 +157,7 @@ export class ActivityRouter {
 
   destroy(): void {
     this.unmountCurrentActivity();
+    this.clearEndingGate();
     this.ending = false;
     this.clearScreenEffects();
     this.root.replaceChildren();
@@ -224,9 +231,16 @@ export class ActivityRouter {
     playAgainButton.type = 'button';
     playAgainButton.className = 'ending-play-again';
     playAgainButton.textContent = getI18nText('playAgain', currentLang);
-    playAgainButton.addEventListener('click', () => {
+    // 終了画面からの再開は保護者ゲート(3秒長押し)必須とし、直接showMenuしない。
+    // タイマー再設定は onEndingResume 側(main.tsのendSession.configure)が担う。
+    this.clearEndingGate();
+    this.endingGateCleanup = installParentalGate(playAgainButton, () => {
       this.sfx.play('pop');
-      this.showMenu();
+      if (this.onEndingResume) {
+        this.onEndingResume();
+      } else {
+        this.showMenu();
+      }
     });
     screen.append(playAgainButton);
 
@@ -297,6 +311,11 @@ export class ActivityRouter {
       stage.append(fallbackMessage);
       window.setTimeout(() => this.showMenu(), 2_000);
     }
+  }
+
+  private clearEndingGate(): void {
+    this.endingGateCleanup?.();
+    this.endingGateCleanup = null;
   }
 
   private clearScreenEffects(): void {
