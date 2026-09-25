@@ -96,6 +96,12 @@ button:focus-visible {
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
+.ending-play-again.is-holding {
+  background:
+    linear-gradient(90deg, rgb(2 136 209 / 22%) var(--hold-progress, 0%), transparent var(--hold-progress, 0%)),
+    linear-gradient(145deg, #ffffff 0%, #f0f7fc 100%);
+}
+
 /* Install prompt banner (PWA / iOS Add to Home Screen) */
 .install-banner {
   position: fixed;

@@ -97,6 +97,10 @@ router = new ActivityRouter({
   onTaskComplete: () => {
     endSession.notifyTaskComplete();
   },
+  onEndingResume: () => {
+    endSession.configure(settings.endTimerMinutes);
+    router?.showMenu();
+  },
 });
 
 const unlockAudio = (): void => {
