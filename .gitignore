@@ -13,3 +13,4 @@ desktop.ini
 workspace.json
 workspace-mobile.json
 .playwright-cli/
+output/
