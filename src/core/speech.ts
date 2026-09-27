@@ -88,6 +88,13 @@ class WebSpeechService implements SpeechService {
   }
 
   speakDirect(japaneseText: string): void {
+    const vocabKey = (Object.keys(VOCAB) as VocabKey[]).find(
+      (key) => VOCAB[key].ja === japaneseText,
+    );
+    if (vocabKey) {
+      this.speak(vocabKey);
+      return;
+    }
     if (!this.unlocked || !this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
     try { this.synthesis.cancel(); } catch { return; }
     const utterance = new SpeechSynthesisUtterance(japaneseText);
