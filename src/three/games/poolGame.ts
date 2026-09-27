@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 interface Ball3D {
@@ -52,18 +53,14 @@ export class PoolGame implements GameModule {
   }
 
   unmount(): void {
-    for (const off of this.cleanup) off();
-    this.hud?.dispose();
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
-    this.particles?.dispose();
-    this.cameraPulse?.dispose();
     this.particles = null;
     this.cameraPulse = null;
     if (this.boundary) removeAndDispose(this.boundary);
     this.boundary = undefined;
     for (const ball of this.balls) removeAndDispose(ball.mesh);
     this.balls = [];
-    this.cleanup = [];
     this.context = null;
   }
 

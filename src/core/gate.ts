@@ -12,6 +12,7 @@ const LANGUAGE_LABELS: Readonly<Record<Settings['langMode'], string>> = {
 };
 const END_TIMER_CHOICES = [
   { value: 'none', minutes: null, labelJa: 'なし', labelTh: 'ไม่มี', labelEn: 'None' },
+  { value: '5', minutes: 5, labelJa: '5分', labelTh: '5 นาที', labelEn: '5 min' },
   { value: '10', minutes: 10, labelJa: '10分', labelTh: '10 นาที', labelEn: '10 min' },
   { value: '20', minutes: 20, labelJa: '20分', labelTh: '20 นาที', labelEn: '20 min' },
   { value: '30', minutes: 30, labelJa: '30分', labelTh: '30 นาที', labelEn: '30 min' },
