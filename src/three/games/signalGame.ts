@@ -130,7 +130,7 @@ export class SignalGame implements GameModule {
     this.leftLamp = vehicle.leftLamp;
     this.rightLamp = vehicle.rightLamp;
     this.beaconColors = vehicle.beaconColors;
-    this.vehicleLabel = type === 'fire-truck' ? 'しょうぼうしゃ' : type === 'ambulance' ? 'きゅうきゅうしゃ' : 'パトカー';
+    this.vehicleLabel = type === 'fire-truck' ? 'しょうぼうしゃ' : type === 'ambulance' ? 'きゅうきゅうしゃ' : 'ぱとかー';
     this.car!.position.set(-1.6, 0, 7);
     this.car!.rotation.y = Math.PI;
     this.context.world.setCameraPreset('drive');
@@ -189,8 +189,8 @@ export class SignalGame implements GameModule {
       this.context.world.camera.lookAt(car.position.x * 0.45, 0.9, car.position.z - 6);
       const now = performance.now();
       if (now >= this.nextSirenAt) {
-        this.context.sfx(this.vehicleLabel === 'パトカー' ? 'policeSiren' : 'siren');
-        this.nextSirenAt = now + (this.vehicleLabel === 'パトカー' ? 620 : 740);
+        this.context.sfx(this.vehicleLabel === 'ぱとかー' ? 'policeSiren' : 'siren');
+        this.nextSirenAt = now + (this.vehicleLabel === 'ぱとかー' ? 620 : 740);
       }
       car.rotation.y = Math.PI + Math.sin(time * 9) * 0.025;
       this.tireMarkTimer -= delta;

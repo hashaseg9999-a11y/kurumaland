@@ -30,6 +30,7 @@ class WebSpeechService implements SpeechService {
   private unlocked = false;
   private rotateIndex = 0;
   private previousMode: LangMode | null = null;
+  private requestId = 0;
 
   constructor(private readonly settings: Settings) {
     this.synthesis =
@@ -61,6 +62,7 @@ class WebSpeechService implements SpeechService {
       return;
     }
 
+    const requestId = ++this.requestId;
     const lang = this.resolveLanguage();
     const languageTag = LANGUAGE_TAGS[lang];
 
@@ -72,6 +74,7 @@ class WebSpeechService implements SpeechService {
 
     this.refreshVoices();
     const voice = this.findVoice(languageTag);
+    if (requestId !== this.requestId) return;
 
     try {
       const utterance = new SpeechSynthesisUtterance(words[lang]);
@@ -89,21 +92,38 @@ class WebSpeechService implements SpeechService {
 
   speakDirect(japaneseText: string): void {
     if (!this.unlocked || !this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
+    const requestId = ++this.requestId;
+    const vehicleKey = (['fireTruck', 'ambulance', 'policeCar'] as const).find(
+      (key) => japaneseText === `あお！ ${VOCAB[key].ja}、ごー！`,
+    );
+    const words = vehicleKey
+      ? {
+          ja: japaneseText,
+          en: `green! ${VOCAB[vehicleKey].en}, go!`,
+          th: `สีเขียว! ${VOCAB[vehicleKey].th} ไปเลย!`,
+        }
+      : japaneseText === 'あか！ とまれ！' ? VOCAB.stop : null;
+    const lang = words ? this.resolveLanguage() : 'ja';
+    const languageTag = LANGUAGE_TAGS[lang];
     try { this.synthesis.cancel(); } catch { return; }
-    const utterance = new SpeechSynthesisUtterance(japaneseText);
-    utterance.lang = 'ja-JP';
+    this.refreshVoices();
+    const voice = this.findVoice(languageTag);
+    if (requestId !== this.requestId) return;
+    const utterance = new SpeechSynthesisUtterance(words ? words[lang] : japaneseText);
+    utterance.lang = languageTag;
     utterance.rate = SPEECH_RATE;
     utterance.pitch = 1.15;
-    const voice = this.findVoice('ja-JP');
     if (voice) utterance.voice = voice;
-    this.synthesis.speak(utterance);
+    try { this.synthesis.speak(utterance); } catch { /* 音声APIの失敗で遊びを止めない。 */ }
   }
 
   getLanguage(): Lang {
     const mode = this.settings.langMode;
     if (mode !== 'rotate') {
+      this.previousMode = mode;
       return mode;
     }
+    if (this.previousMode !== 'rotate') return 'ja';
     return ROTATING_LANGUAGES[this.rotateIndex] ?? 'ja';
   }
 
