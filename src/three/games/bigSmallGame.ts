@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
@@ -64,10 +65,7 @@ export class BigSmallGame implements GameModule {
   }
 
   unmount(): void {
-    for (const off of this.cleanup) off();
-    this.hud?.dispose();
-    this.particles?.dispose();
-    this.cameraPulse?.dispose();
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.particles = null;
     this.cameraPulse = null;
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
@@ -83,7 +81,6 @@ export class BigSmallGame implements GameModule {
     for (const car of this.cars) removeAndDispose(car.group);
     this.cars = [];
     this.slots = [];
-    this.cleanup = [];
     this.context = null;
   }
 

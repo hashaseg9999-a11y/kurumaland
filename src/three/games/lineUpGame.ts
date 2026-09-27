@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 type TrainColor = 'red' | 'blue' | 'green';
@@ -62,13 +63,10 @@ export class LineUpGame implements GameModule {
   }
 
   unmount(): void {
-    for (const off of this.cleanup) off();
-    this.hud?.dispose();
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
     this.sparkleUntil = 0;
     this.clearSparkles();
-    this.particles?.dispose();
-    this.cameraPulse?.dispose();
     this.particles = null;
     this.cameraPulse = null;
     if (this.guideGroup) removeAndDispose(this.guideGroup);
@@ -81,7 +79,6 @@ export class LineUpGame implements GameModule {
     for (const car of this.cars) removeAndDispose(car.group);
     if (this.locomotive) removeAndDispose(this.locomotive);
     this.cars = [];
-    this.cleanup = [];
     this.context = null;
   }
 
