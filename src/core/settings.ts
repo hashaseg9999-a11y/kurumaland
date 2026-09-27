@@ -1,6 +1,6 @@
 import type { LangMode } from './speech';
 
-export type EndTimerMinutes = 10 | 20 | 30 | null;
+export type EndTimerMinutes = 5 | 10 | 20 | 30 | null;
 
 export interface Settings {
   langMode: LangMode;
@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
 
 const STORAGE_KEY = 'kuruma-land.settings.v1';
 export const LANG_MODES = ['ja', 'en', 'th', 'rotate'] as const satisfies readonly LangMode[];
-const VALID_END_TIMERS: readonly EndTimerMinutes[] = [10, 20, 30, null];
+const VALID_END_TIMERS: readonly EndTimerMinutes[] = [5, 10, 20, 30, null];
 
 function getStorage(): Storage | null {
   try {
