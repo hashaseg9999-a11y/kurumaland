@@ -13,6 +13,9 @@ export const VOCAB = {
 
   // 信号・動作・ルール（A1）
   go: { ja: 'あお！ ごー！', en: 'green! go!', th: 'สีเขียว! ไปเลย!' },
+  goFireTruck: { ja: 'あお！ しょうぼうしゃ、ごー！', en: 'green! fire truck, go!', th: 'ไฟเขียว! รถดับเพลิง ไปเลย!' },
+  goAmbulance: { ja: 'あお！ きゅうきゅうしゃ、ごー！', en: 'green! ambulance, go!', th: 'ไฟเขียว! รถพยาบาล ไปเลย!' },
+  goPoliceCar: { ja: 'あお！ ぱとかー、ごー！', en: 'green! police car, go!', th: 'ไฟเขียว! รถตำรวจ ไปเลย!' },
   stop: { ja: 'あか！ とまれ！', en: 'red! stop!', th: 'สีแดง! หยุด!' },
   caution: { ja: 'きいろ！ ちゅうい！', en: 'yellow! caution!', th: 'สีเหลือง! ระวัง!' },
   railroadCrossing: { ja: 'かんかんかん！ でんしゃが くるよ', en: 'ding ding! train is coming', th: 'รถไฟกำลังมา!' },

@@ -96,6 +96,16 @@ const WASH_STYLES = `
     touch-action: none;
   }
 
+  @media (min-aspect-ratio: 16/9) {
+    .kl-wash__background {
+      object-position: center top;
+    }
+
+    .kl-wash__bay {
+      top: clamp(48px, 12vh, 100px);
+    }
+  }
+
   .kl-wash__visual,
   .kl-wash__car,
   .kl-wash__canvas {
