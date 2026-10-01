@@ -15,11 +15,11 @@ export const VOCAB = {
   go: { ja: 'あお！ ごー！', en: 'green! go!', th: 'สีเขียว! ไปเลย!' },
   stop: { ja: 'あか！ とまれ！', en: 'red! stop!', th: 'สีแดง! หยุด!' },
   caution: { ja: 'きいろ！ ちゅうい！', en: 'yellow! caution!', th: 'สีเหลือง! ระวัง!' },
-  signalFireTruckGo: { ja: 'あお！ しょうぼうしゃ、ごー！', en: 'green! fire truck, go!', th: 'ไฟเขียว! รถดับเพลิง ไปเลย!' },
-  signalAmbulanceGo: { ja: 'あお！ きゅうきゅうしゃ、ごー！', en: 'green! ambulance, go!', th: 'ไฟเขียว! รถพยาบาล ไปเลย!' },
-  signalPoliceGo: { ja: 'あお！ パトカー、ごー！', en: 'green! police car, go!', th: 'ไฟเขียว! รถตำรวจ ไปเลย!' },
   railroadCrossing: { ja: 'かんかんかん！ でんしゃが くるよ', en: 'ding ding! train is coming', th: 'รถไฟกำลังมา!' },
   animalCrossing: { ja: 'どうぶつさんが わたるよ', en: 'animals crossing', th: 'สัตว์กำลังข้ามถนน' },
+  goFireTruck: { ja: 'あお！ しょうぼうしゃ、ごー！', en: 'green! go, fire truck!', th: 'สีเขียว! รถดับเพลิง ไปเลย!' },
+  goAmbulance: { ja: 'あお！ きゅうきゅうしゃ、ごー！', en: 'green! go, ambulance!', th: 'สีเขียว! รถพยาบาล ไปเลย!' },
+  goPoliceCar: { ja: 'あお！ ぱとかー、ごー！', en: 'green! go, police car!', th: 'สีเขียว! รถตำรวจ ไปเลย!' },
   driveFast: { ja: 'ぶるるーん！ はやいね！', en: 'vroom! so fast!', th: 'เร็วมากเลย!' },
 
   // 色と車庫・仲間分け（A1・A2）
@@ -100,12 +100,14 @@ export const VOCAB = {
   count4: { ja: 'よん！', en: 'four!', th: 'สี่!' },
   count5: { ja: 'ご！', en: 'five!', th: 'ห้า!' },
   connect: { ja: 'がっしゃん！ つながったよ！', en: 'connected together!', th: 'ต่อกันแล้ว!' },
+  trainDepart: { ja: 'れっしゃ しゅっぱつ！', en: 'the train is leaving!', th: 'รถไฟออกเดินทาง!' },
   depart: { ja: 'しゅっぱつ しんこうー！ ぽっぽー！', en: 'all aboard! let’s go!', th: 'ออกเดินทางได้! ปู้นๆ!' },
 
   // ほめことば・歓声（全アクティビティ共通）
   wellDone: { ja: 'よく できたね！', en: 'well done!', th: 'เก่งมาก!' },
   goodJob: { ja: 'たいへん よく できました！', en: 'fantastic job!', th: 'ยอดเยี่ยมมาก!' },
   great: { ja: 'やったー！ だいせいこう！', en: 'yay! big success!', th: 'ไชโย! สำเร็จแล้ว!' },
+  bonus: { ja: 'やったー！ ぼーなす！', en: 'yay! bonus!', th: 'ไชโย! โบนัส!' },
   genius: { ja: 'すごい！ じょうずだね！', en: 'amazing! so good!', th: 'สุดยอด! เก่งจังเลย!' },
 } as const;
 

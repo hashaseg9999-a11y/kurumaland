@@ -20,6 +20,37 @@ const LANGUAGE_TAGS: Readonly<Record<Lang, string>> = {
 };
 const SPEECH_RATE = 0.9;
 
+/** 3Dゲームが渡す日本語フレーズ → 3言語語彙キー。キーはひらがな正規化後の表記。 */
+const PHRASE_TO_VOCAB: Readonly<Record<string, VocabKey>> = {
+  'あお！ しょうぼうしゃ、ごー！': 'goFireTruck',
+  'あお！ きゅうきゅうしゃ、ごー！': 'goAmbulance',
+  'あお！ ぱとかー、ごー！': 'goPoliceCar',
+  'あか！ とまれ！': 'stop',
+  'よくできたね！': 'wellDone',
+  'おおきい！': 'big',
+  'ちいさい！': 'small',
+  'あか！': 'red',
+  'あお！': 'blue',
+  'きいろ！': 'yellow',
+  'みどり！': 'green',
+  'あかい くるま！': 'redCar',
+  'あおい くるま！': 'blueCar',
+  'みどりの くるま！': 'greenCar',
+  'れっしゃ しゅっぱつ！': 'trainDepart',
+  'やったー！ ぼーなす！': 'bonus',
+};
+
+/** カタカナをひらがなへ寄せ、「パトカー」「ぱとかー」の表記揺れで無音にならないようにする。 */
+function normalizePhrase(text: string): string {
+  return text
+    .trim()
+    .replace(/[\u30a1-\u30f6]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
+}
+
+export function resolvePhraseKey(japaneseText: string): VocabKey | undefined {
+  return PHRASE_TO_VOCAB[normalizePhrase(japaneseText)];
+}
+
 function normalizeLanguageTag(tag: string): string {
   return tag.trim().replaceAll('_', '-').toLowerCase();
 }
@@ -49,11 +80,7 @@ class WebSpeechService implements SpeechService {
   }
 
   speak(key: VocabKey): void {
-    if (
-      !this.unlocked ||
-      !this.synthesis ||
-      typeof SpeechSynthesisUtterance === 'undefined'
-    ) {
+    if (!this.canSpeak()) {
       return;
     }
 
@@ -62,56 +89,31 @@ class WebSpeechService implements SpeechService {
       return;
     }
 
-    const requestId = ++this.requestId;
     const lang = this.resolveLanguage();
-    const languageTag = LANGUAGE_TAGS[lang];
-
-    try {
-      this.synthesis.cancel();
-    } catch {
-      return;
-    }
-
-    this.refreshVoices();
-    const voice = this.findVoice(languageTag);
-    if (requestId !== this.requestId) return;
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(words[lang]);
-      utterance.lang = languageTag;
-      utterance.rate = SPEECH_RATE;
-      utterance.pitch = 1.15;
-      if (voice) {
-        utterance.voice = voice;
-      }
-      this.synthesis.speak(utterance);
-    } catch {
-      // 音声APIが不安定な環境でも、遊び自体は止めない。
-    }
+    this.say(words[lang], lang);
   }
 
   speakDirect(japaneseText: string): void {
-    if (!this.unlocked || !this.synthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
-    const requestId = ++this.requestId;
-    try { this.synthesis.cancel(); } catch { return; }
-    const utterance = new SpeechSynthesisUtterance(japaneseText);
-    utterance.lang = 'ja-JP';
-    utterance.rate = SPEECH_RATE;
-    utterance.pitch = 1.15;
-    const voice = this.findVoice('ja-JP');
-    if (voice) utterance.voice = voice;
-    if (requestId === this.requestId) this.synthesis.speak(utterance);
+    const key = resolvePhraseKey(japaneseText);
+    if (key) {
+      this.speak(key);
+      return;
+    }
+    // 語彙未登録のフレーズは従来どおり日本語で読み上げる（無音にしない）。
+    if (this.canSpeak()) {
+      this.say(japaneseText, 'ja');
+    }
   }
 
+  /** UI表示用。rotateの巡回順を消費せず、次に発話される言語を返す。 */
   getLanguage(): Lang {
     const mode = this.settings.langMode;
     if (mode !== 'rotate') {
       this.previousMode = mode;
       return mode;
     }
-    return this.previousMode === 'rotate'
-      ? ROTATING_LANGUAGES[this.rotateIndex] ?? 'ja'
-      : 'ja';
+    const index = this.previousMode === 'rotate' ? this.rotateIndex : 0;
+    return ROTATING_LANGUAGES[index] ?? 'ja';
   }
 
   unlock(): void {
@@ -140,6 +142,46 @@ class WebSpeechService implements SpeechService {
       this.synthesis.speak(utterance);
     } catch {
       // iOS等で無音発話に失敗しても、例外を画面へ伝播させない。
+    }
+  }
+
+  private canSpeak(): boolean {
+    return (
+      this.unlocked &&
+      this.synthesis !== null &&
+      typeof SpeechSynthesisUtterance !== 'undefined'
+    );
+  }
+
+  /** 発話中の音声は必ず止めてから話すため、最後の要求だけが聞こえる。 */
+  private say(text: string, lang: Lang): void {
+    if (!this.synthesis) {
+      return;
+    }
+    const requestId = ++this.requestId;
+    const languageTag = LANGUAGE_TAGS[lang];
+
+    try {
+      this.synthesis.cancel();
+    } catch {
+      return;
+    }
+
+    this.refreshVoices();
+    const voice = this.findVoice(languageTag);
+    if (requestId !== this.requestId) return;
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = languageTag;
+      utterance.rate = SPEECH_RATE;
+      utterance.pitch = 1.15;
+      if (voice) {
+        utterance.voice = voice;
+      }
+      this.synthesis.speak(utterance);
+    } catch {
+      // 音声APIが不安定な環境でも、遊び自体は止めない。
     }
   }
 

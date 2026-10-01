@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
-import { disposeGameBasics } from '../gameCleanup';
 
 interface Ball3D {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -53,7 +53,7 @@ export class PoolGame implements GameModule {
   }
 
   unmount(): void {
-    disposeGameBasics(this.cleanup, this.hud, this.particles, this.cameraPulse);
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
     this.particles = null;
     this.cameraPulse = null;

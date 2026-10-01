@@ -7,7 +7,6 @@ import { threeGames } from './games';
 import type { GameContext, GameModule, GameSfxName } from './contracts';
 import type { SfxService, SfxName } from '../core/sfx';
 import type { SpeechService } from '../core/speech';
-import type { VocabKey } from '../core/vocab';
 
 type ActivitySfxName = GameSfxName;
 const ACTIVITY_SFX_MAP: Record<ActivitySfxName, SfxName> = {
@@ -33,12 +32,6 @@ const THREE_GAME_INSTRUCTIONS: Record<string, string> = {
   'big-small': 'おおきい くるまと ちいさい くるまを ならべよう！',
   'ball-pool': 'ボールを ひっぱって うごかそう！',
   'line-up': 'いろの せいれつに くるまをつなげよう！',
-};
-
-const SIGNAL_GO_VOCAB: Readonly<Record<string, VocabKey>> = {
-  'あお！ しょうぼうしゃ、ごー！': 'signalFireTruckGo',
-  'あお！ きゅうきゅうしゃ、ごー！': 'signalAmbulanceGo',
-  'あお！ パトカー、ごー！': 'signalPoliceGo',
 };
 
 export class ThreeWorldActivity implements Activity {
@@ -140,8 +133,6 @@ export class ThreeWorldActivity implements Activity {
 
   private speakText(textValue: string): void {
     if (!this.contextServices) return;
-    const key = SIGNAL_GO_VOCAB[textValue];
-    if (key) this.contextServices.speech.speak(key);
-    else this.contextServices.speech.speakDirect(textValue);
+    this.contextServices.speech.speakDirect(textValue);
   }
 }
