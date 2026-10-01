@@ -61,6 +61,7 @@ class WebSpeechService implements SpeechService {
   private unlocked = false;
   private rotateIndex = 0;
   private previousMode: LangMode | null = null;
+  private requestId = 0;
 
   constructor(private readonly settings: Settings) {
     this.synthesis =
@@ -108,6 +109,7 @@ class WebSpeechService implements SpeechService {
   getLanguage(): Lang {
     const mode = this.settings.langMode;
     if (mode !== 'rotate') {
+      this.previousMode = mode;
       return mode;
     }
     const index = this.previousMode === 'rotate' ? this.rotateIndex : 0;
@@ -156,6 +158,7 @@ class WebSpeechService implements SpeechService {
     if (!this.synthesis) {
       return;
     }
+    const requestId = ++this.requestId;
     const languageTag = LANGUAGE_TAGS[lang];
 
     try {
@@ -166,6 +169,7 @@ class WebSpeechService implements SpeechService {
 
     this.refreshVoices();
     const voice = this.findVoice(languageTag);
+    if (requestId !== this.requestId) return;
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);

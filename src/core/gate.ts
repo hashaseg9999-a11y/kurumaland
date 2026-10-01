@@ -302,6 +302,10 @@ export function mountParentalSettingsGate(
       ? (lang === 'th' ? timerChoice.labelTh : lang === 'en' ? timerChoice.labelEn : timerChoice.labelJa)
       : 'None';
     summary.textContent = `${LANGUAGE_LABELS[settings.langMode]} / ${timerLabelText}`;
+    for (const [index, choice] of END_TIMER_CHOICES.entries()) {
+      const option = timerSelect.options.item(index);
+      if (option) option.textContent = lang === 'th' ? choice.labelTh : lang === 'en' ? choice.labelEn : choice.labelJa;
+    }
 
     title.textContent = getI18nText('parentalSettingsTitle', lang);
     languageLabel.textContent = getI18nText('parentalLanguageLabel', lang);
