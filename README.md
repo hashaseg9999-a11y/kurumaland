@@ -75,7 +75,10 @@ npm run dev
 
 ## 検証コマンド
 
+Node.js 22.13以降を使用してください。`npm run test` は追加依存なしの回帰テスト（音声・設定・タイマー・cleanup・洗車レイアウトの寸法計算）です。実ブラウザやiPad Safariの見た目・操作確認は別途行います。
+
 ```bash
+npm run test
 npm run typecheck
 npm run build
 npm run verify

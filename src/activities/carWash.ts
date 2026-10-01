@@ -96,9 +96,14 @@ const WASH_STYLES = `
     touch-action: none;
   }
 
-  @media (min-aspect-ratio: 16/9) {
+  /* 16:9等のワイド画面: 上部ボタン帯と道具トレイの間に収まる大きさにし、その中央へ置く。4:3は従来どおり。 */
+  @media (min-aspect-ratio: 3 / 2) {
     .kl-wash__bay {
-      top: clamp(80px, 11vh, 104px);
+      --wash-free-top: clamp(72px, 12vh, 128px);
+      --wash-free-height: calc(100vh - var(--wash-free-top) - clamp(126px, 21vh, 168px) - 40px);
+      --wash-bay-width: min(64vw, 680px, var(--wash-free-height) * 4 / 3);
+      top: calc(var(--wash-free-top) + (var(--wash-free-height) - var(--wash-bay-width) * 3 / 4) / 2);
+      width: var(--wash-bay-width);
     }
   }
 

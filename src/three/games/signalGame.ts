@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createEmergencyVehicle, pickRandomEmergencyType } from '../emergencyVehicles';
 import type { GameContext, GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
 
 export class SignalGame implements GameModule {
@@ -57,17 +58,13 @@ export class SignalGame implements GameModule {
   }
 
   unmount(): void {
-    for (const off of this.cleanup) off();
-    this.hud?.dispose();
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.clearTireMarks();
     this.tireMarkGeometry.dispose();
     if (this.signalFlash) removeAndDispose(this.signalFlash);
     this.signalFlash = undefined;
-    this.particles?.dispose();
-    this.cameraPulse?.dispose();
     this.particles = null;
     this.cameraPulse = null;
-    this.cleanup = [];
     if (this.car) removeAndDispose(this.car);
     this.context = null;
   }
@@ -130,7 +127,7 @@ export class SignalGame implements GameModule {
     this.leftLamp = vehicle.leftLamp;
     this.rightLamp = vehicle.rightLamp;
     this.beaconColors = vehicle.beaconColors;
-    this.vehicleLabel = type === 'fire-truck' ? 'しょうぼうしゃ' : type === 'ambulance' ? 'きゅうきゅうしゃ' : 'ぱとかー';
+    this.vehicleLabel = type === 'fire-truck' ? 'しょうぼうしゃ' : type === 'ambulance' ? 'きゅうきゅうしゃ' : 'パトカー';
     this.car!.position.set(-1.6, 0, 7);
     this.car!.rotation.y = Math.PI;
     this.context.world.setCameraPreset('drive');
@@ -189,8 +186,8 @@ export class SignalGame implements GameModule {
       this.context.world.camera.lookAt(car.position.x * 0.45, 0.9, car.position.z - 6);
       const now = performance.now();
       if (now >= this.nextSirenAt) {
-        this.context.sfx(this.vehicleLabel === 'ぱとかー' ? 'policeSiren' : 'siren');
-        this.nextSirenAt = now + (this.vehicleLabel === 'ぱとかー' ? 620 : 740);
+        this.context.sfx(this.vehicleLabel === 'パトカー' ? 'policeSiren' : 'siren');
+        this.nextSirenAt = now + (this.vehicleLabel === 'パトカー' ? 620 : 740);
       }
       car.rotation.y = Math.PI + Math.sin(time * 9) * 0.025;
       this.tireMarkTimer -= delta;

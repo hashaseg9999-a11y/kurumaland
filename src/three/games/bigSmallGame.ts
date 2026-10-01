@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { createCar } from '../cars';
 import { type CarColorName, type GameContext, type GameModule } from '../contracts';
 import { removeAndDispose } from '../objectCleanup';
+import { releaseGameBase } from '../gameLifecycle';
 import { createCameraMicroPulse, createGameHud, createParticleBurst } from '../gameHud';
-import { disposeGameBasics } from './gameCleanup';
 
 const COLORS: readonly CarColorName[] = ['red', 'blue', 'yellow', 'green'];
 const LANES: Record<CarColorName, [number, number]> = {
@@ -65,7 +65,7 @@ export class BigSmallGame implements GameModule {
   }
 
   unmount(): void {
-    this.cleanup = disposeGameBasics(this.cleanup, this.hud, this.particles, this.cameraPulse);
+    releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.particles = null;
     this.cameraPulse = null;
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
