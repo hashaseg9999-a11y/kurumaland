@@ -29,6 +29,7 @@ export class LineUpGame implements GameModule {
   private dragged: TrainCar | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private dragCleanup: (() => void) | null = null;
   private trainRunning = false;
   private trainDistance = 0;
   private resetTimer?: number;
@@ -63,6 +64,9 @@ export class LineUpGame implements GameModule {
   }
 
   unmount(): void {
+    this.dragCleanup?.();
+    this.trainRunning = false;
+    this.trainDistance = 0;
     releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     if (this.resetTimer) window.clearTimeout(this.resetTimer);
     this.sparkleUntil = 0;
@@ -254,7 +258,8 @@ export class LineUpGame implements GameModule {
       this.dragged.lastEvent = event;
       this.updateDrag();
     };
-    const release = (): void => {
+    const release = (event: PointerEvent): void => {
+      if (event.pointerId !== this.pointerId) return;
       const item = this.dragged;
       if (!this.context || !item) return;
       if (this.nearCoupling(item)) {
@@ -280,15 +285,28 @@ export class LineUpGame implements GameModule {
       item.dragging = false;
       this.dragged = null;
       this.pointerId = null;
+      this.dragCleanup?.();
+    };
+    this.dragCleanup = () => {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
       canvas.removeEventListener('lostpointercapture', release);
+      if (this.pointerId !== null) {
+        try {
+          if (canvas.hasPointerCapture(this.pointerId)) canvas.releasePointerCapture(this.pointerId);
+        } catch { /* Capture can already be lost during navigation. */ }
+      }
+      if (this.dragged) this.dragged.dragging = false;
+      this.dragged = null;
+      this.pointerId = null;
       this.moveAttached = false;
+      this.dragCleanup = null;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('lostpointercapture', release);
   }
 
   private nearCoupling(item: TrainCar): boolean {

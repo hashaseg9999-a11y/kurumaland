@@ -176,7 +176,7 @@ class BallPoolActivity implements Activity {
       this.lastDragY = event.clientY;
       this.lastDragTime = performance.now();
       this.dragDistance = 0;
-      const stageEl = this.root;
+      const stageEl = event.currentTarget as HTMLElement | null;
       try {
         stageEl?.setPointerCapture(event.pointerId);
       } catch {
@@ -339,6 +339,10 @@ class BallPoolActivity implements Activity {
   };
 
   unmount(): void {
+    this.pointerId = null;
+    this.draggedBall = null;
+    this.dragDistance = 0;
+    this.bonusEndTime = 0;
     if (this.rafId !== null) {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;

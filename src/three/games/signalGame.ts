@@ -58,6 +58,10 @@ export class SignalGame implements GameModule {
   }
 
   unmount(): void {
+    this.isGo = false;
+    this.distance = 0;
+    this.currentSpeed = 0;
+    this.resetAt = Number.POSITIVE_INFINITY;
     releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.clearTireMarks();
     this.tireMarkGeometry.dispose();

@@ -278,6 +278,8 @@ class SignalActivity implements Activity {
   private particles: ParticleSystem | null = null;
   private isDriving = false;
   private state: SignalState = 'red';
+  private smokeIntervalId: number | null = null;
+  private entranceTimerId: number | null = null;
   private carIndex = 0;
 
   private readonly handleSignalPointerDown = (event: PointerEvent): void => {
@@ -386,6 +388,10 @@ class SignalActivity implements Activity {
   }
 
   unmount(): void {
+    if (this.smokeIntervalId !== null) window.clearInterval(this.smokeIntervalId);
+    if (this.entranceTimerId !== null) window.clearTimeout(this.entranceTimerId);
+    this.smokeIntervalId = null;
+    this.entranceTimerId = null;
     this.listeners?.abort();
     this.listeners = null;
 
@@ -456,7 +462,7 @@ class SignalActivity implements Activity {
     const driveDistance = stageWidth - currentCarRect.left + 120;
 
     // 走る時の煙と虹トレイル
-    const smokeInterval = window.setInterval(() => {
+    this.smokeIntervalId = window.setInterval(() => {
       if (!this.carButton) return;
       const rect = this.carButton.getBoundingClientRect();
       this.particles?.emitSmokePuffs(rect.left + 20, rect.bottom - 20, 2);
@@ -478,7 +484,8 @@ class SignalActivity implements Activity {
 
     this.driveAnimation = animation;
     animation.onfinish = () => {
-      clearInterval(smokeInterval);
+      if (this.smokeIntervalId !== null) window.clearInterval(this.smokeIntervalId);
+      this.smokeIntervalId = null;
       this.driveAnimation = null;
       this.onCarExited();
     };
@@ -505,7 +512,8 @@ class SignalActivity implements Activity {
     this.carButton.classList.remove('car-driving');
     this.carButton.style.transform = `translateX(-${targetLeft + 380}px)`;
 
-    window.setTimeout(() => {
+    this.entranceTimerId = window.setTimeout(() => {
+      this.entranceTimerId = null;
       if (!this.carButton || !this.context) return;
 
       this.context.sfx.play('engine');

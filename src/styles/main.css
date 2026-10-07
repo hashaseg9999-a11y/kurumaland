@@ -74,6 +74,7 @@ button:focus-visible {
 
 /* Ending screen: play again button */
 .ending-play-again {
+  pointer-events: auto;
   position: absolute;
   bottom: max(28px, env(safe-area-inset-bottom));
   left: 50%;

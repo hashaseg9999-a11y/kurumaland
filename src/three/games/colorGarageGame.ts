@@ -39,6 +39,7 @@ export class ColorGarageGame implements GameModule {
   private dragged: DraggableCar | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private dragCleanup: (() => void) | null = null;
   private resetTimer?: number;
   private garages: GarageVisual[] = [];
   private lastFrameAt: number | null = null;
@@ -66,6 +67,7 @@ export class ColorGarageGame implements GameModule {
   }
 
   unmount(): void {
+    this.dragCleanup?.();
     releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.particles = null;
     this.cameraPulse = null;
@@ -134,7 +136,8 @@ export class ColorGarageGame implements GameModule {
       item.lastEvent = event;
       this.updateDragFromPointer();
     };
-    const release = (): void => {
+    const release = (event: PointerEvent): void => {
+      if (event.pointerId !== this.pointerId) return;
       const item = this.dragged;
       if (!this.context || !item) return;
       const nearAnyGarage = Object.values(LANES).some((lane) => Math.abs(item.group.position.x - lane) < 1.55)
@@ -171,11 +174,23 @@ export class ColorGarageGame implements GameModule {
       item.lastEvent = undefined;
       this.dragged = null;
       this.pointerId = null;
+      this.dragCleanup?.();
+    };
+    this.dragCleanup = () => {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
       canvas.removeEventListener('lostpointercapture', release);
+      if (this.pointerId !== null) {
+        try {
+          if (canvas.hasPointerCapture(this.pointerId)) canvas.releasePointerCapture(this.pointerId);
+        } catch { /* Capture can already be lost during navigation. */ }
+      }
+      if (this.dragged) this.dragged.dragging = false;
+      this.dragged = null;
+      this.pointerId = null;
       this.moveAttached = false;
+      this.dragCleanup = null;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);
