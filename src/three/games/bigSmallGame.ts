@@ -43,6 +43,7 @@ export class BigSmallGame implements GameModule {
   private dragged: SizedCar | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private dragCleanup: (() => void) | null = null;
   private resetTimer?: number;
   private slots: SlotVisual[] = [];
   private lastFrameAt: number | null = null;
@@ -65,6 +66,7 @@ export class BigSmallGame implements GameModule {
   }
 
   unmount(): void {
+    this.dragCleanup?.();
     releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     this.particles = null;
     this.cameraPulse = null;
@@ -234,7 +236,8 @@ export class BigSmallGame implements GameModule {
       this.dragged.lastEvent = event;
       this.updateDrag();
     };
-    const release = (): void => {
+    const release = (event: PointerEvent): void => {
+      if (event.pointerId !== this.pointerId) return;
       const item = this.dragged;
       if (!this.context || !item) return;
       const slotX = item.big ? -3.2 : 3.2;
@@ -267,11 +270,23 @@ export class BigSmallGame implements GameModule {
       item.dragging = false;
       this.dragged = null;
       this.pointerId = null;
+      this.dragCleanup?.();
+    };
+    this.dragCleanup = () => {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
       canvas.removeEventListener('lostpointercapture', release);
+      if (this.pointerId !== null) {
+        try {
+          if (canvas.hasPointerCapture(this.pointerId)) canvas.releasePointerCapture(this.pointerId);
+        } catch { /* Capture can already be lost during navigation. */ }
+      }
+      if (this.dragged) this.dragged.dragging = false;
+      this.dragged = null;
+      this.pointerId = null;
       this.moveAttached = false;
+      this.dragCleanup = null;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);

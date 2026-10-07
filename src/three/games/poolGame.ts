@@ -29,6 +29,7 @@ export class PoolGame implements GameModule {
   private dragged: Ball3D | null = null;
   private pointerId: number | null = null;
   private moveAttached = false;
+  private dragCleanup: (() => void) | null = null;
   private dragDistance = 0;
   private bonusUntil = 0;
   private nextBonusPulseAt = 0;
@@ -53,6 +54,7 @@ export class PoolGame implements GameModule {
   }
 
   unmount(): void {
+    this.dragCleanup?.();
     releaseGameBase(this.cleanup, this.hud, this.particles, this.cameraPulse);
     if (this.bonusTimeout) window.clearTimeout(this.bonusTimeout);
     this.particles = null;
@@ -189,7 +191,8 @@ export class PoolGame implements GameModule {
       previousTime = now;
       if (this.dragDistance >= BONUS_DISTANCE && Date.now() >= this.bonusUntil) this.triggerBonus();
     };
-    const release = (): void => {
+    const release = (event: PointerEvent): void => {
+      if (event.pointerId !== this.pointerId) return;
       const ball = this.dragged;
       if (!ball) return;
       ball.dragging = false;
@@ -197,11 +200,23 @@ export class PoolGame implements GameModule {
       if (ball.velocity.length() > maxSpeed) ball.velocity.setLength(maxSpeed);
       this.dragged = null;
       this.pointerId = null;
+      this.dragCleanup?.();
+    };
+    this.dragCleanup = () => {
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', release);
       canvas.removeEventListener('pointercancel', release);
       canvas.removeEventListener('lostpointercapture', release);
+      if (this.pointerId !== null) {
+        try {
+          if (canvas.hasPointerCapture(this.pointerId)) canvas.releasePointerCapture(this.pointerId);
+        } catch { /* Capture can already be lost during navigation. */ }
+      }
+      if (this.dragged) this.dragged.dragging = false;
+      this.dragged = null;
+      this.pointerId = null;
       this.moveAttached = false;
+      this.dragCleanup = null;
     };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', release);

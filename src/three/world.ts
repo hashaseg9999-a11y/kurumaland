@@ -242,6 +242,7 @@ export class ThreeWorld implements World3D {
     if (this.disposed || this.contextLost || !this.container.clientWidth || !this.container.clientHeight) return;
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight, false);
     this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+    this.camera.updateProjectionMatrix();
     this.applyCamera(false);
   }
 

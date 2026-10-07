@@ -195,6 +195,7 @@ class BigSmallActivity implements Activity {
   readonly menuIcon = menuIcon;
 
   private context: ActivityContext | null = null;
+  private resetTimer: number | null = null;
   private root: HTMLElement | null = null;
   private board: HTMLElement | null = null;
   private banner: HTMLDivElement | null = null;
@@ -354,6 +355,8 @@ class BigSmallActivity implements Activity {
   }
 
   unmount(): void {
+    if (this.resetTimer !== null) window.clearTimeout(this.resetTimer);
+    this.resetTimer = null;
     this.listeners?.abort();
     this.listeners = null;
     this.particles?.destroy();
@@ -518,7 +521,8 @@ class BigSmallActivity implements Activity {
       carBtn.classList.add('car-jumping');
     });
 
-    window.setTimeout(() => {
+    this.resetTimer = window.setTimeout(() => {
+      this.resetTimer = null;
       if (!this.context) return;
       this.setIndex++;
       this.useThreeSizes = !this.useThreeSizes; // 2段階と3段階をローテーション

@@ -83,6 +83,7 @@ class TraceActivity implements Activity {
   readonly menuIcon = menuIcon;
 
   private context: ActivityContext | null = null;
+  private resetTimer: number | null = null;
   private wrapper: HTMLDivElement | null = null;
   private banner: HTMLDivElement | null = null;
   private svg: SVGSVGElement | null = null;
@@ -284,6 +285,8 @@ class TraceActivity implements Activity {
   }
 
   unmount(): void {
+    if (this.resetTimer !== null) window.clearTimeout(this.resetTimer);
+    this.resetTimer = null;
     this.abortController?.abort();
     this.abortController = null;
     this.particles?.destroy();
@@ -520,7 +523,8 @@ class TraceActivity implements Activity {
       this.particles.emitFlowers(rect.width / 2, rect.height * 0.45, 12);
     }
 
-    window.setTimeout(() => {
+    this.resetTimer = window.setTimeout(() => {
+      this.resetTimer = null;
       this.courseIndex = (this.courseIndex + 1) % COURSES.length;
       if (this.courseIndex === 0) {
         this.vehicleIndex = (this.vehicleIndex + 1) % VEHICLES.length;

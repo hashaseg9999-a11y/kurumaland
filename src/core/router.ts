@@ -46,6 +46,7 @@ export class ActivityRouter {
   private readonly onTaskComplete: () => void;
   private readonly onEndingResume: (() => void) | null;
   private currentActivity: Activity | null = null;
+  private fallbackTimerId: number | null = null;
   private transitioning = false;
   private menuEffectsCleanup: (() => void) | null = null;
   private activityEffectsCleanup: (() => void) | null = null;
@@ -288,6 +289,7 @@ export class ActivityRouter {
 
     stage.classList.add('activity-stage');
 
+    this.currentActivity = activity;
     try {
       activity.mount({
         root: stage,
@@ -301,15 +303,18 @@ export class ActivityRouter {
           this.onTaskComplete();
         },
       });
-      this.currentActivity = activity;
     } catch (error) {
+      this.unmountCurrentActivity();
       console.error('[KurumaLand] Activity mount failed:', error);
       const fallbackMessage = document.createElement('p');
       fallbackMessage.className = 'activity-fallback';
       fallbackMessage.setAttribute('role', 'alert');
       fallbackMessage.textContent = getI18nText('backToMenu', currentLang);
       stage.append(fallbackMessage);
-      window.setTimeout(() => this.showMenu(), 2_000);
+      this.fallbackTimerId = window.setTimeout(() => {
+        this.fallbackTimerId = null;
+        this.showMenu();
+      }, 2_000);
     }
   }
 
@@ -326,6 +331,10 @@ export class ActivityRouter {
   }
 
   private unmountCurrentActivity(): void {
+    if (this.fallbackTimerId !== null) {
+      window.clearTimeout(this.fallbackTimerId);
+      this.fallbackTimerId = null;
+    }
     if (this.currentActivity) {
       try {
         this.currentActivity.unmount();
