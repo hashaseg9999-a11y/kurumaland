@@ -170,6 +170,8 @@ class WebSpeechService implements SpeechService {
     this.refreshVoices();
     const voice = this.findVoice(languageTag);
     if (requestId !== this.requestId) return;
+    // タイ語ボイスがない端末では既定言語へフォールバックせず、視覚演出だけを続ける。
+    if (lang === 'th' && !voice) return;
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);

@@ -60,6 +60,27 @@ test('leaving during a signal drive cancels smoke and deferred entrance timers',
  a.startCar();assert.equal(tasks.size,1);a.unmount();assert.equal(tasks.size,0);
 });
 
+test('signal lights and driving animation continue when the Thai voice is unavailable',()=>{
+ const spoken=[];const errors=[];const synthesis={getVoices:()=>[{lang:'ja-JP'},{lang:'en-US'}],addEventListener(){},cancel(){},speak(u){spoken.push(u);}};
+ const {value:VOCAB}=load('core/vocab.ts','VOCAB');
+ const {value:createSpeechService}=load('core/speech.ts','createSpeechService',{VOCAB,window:{speechSynthesis:synthesis},SpeechSynthesisUtterance:class{constructor(text){this.text=text;}},console:{error(e){errors.push(e);},warn(e){errors.push(e);}}});
+ const speech=createSpeechService({langMode:'th'});speech.unlock();spoken.length=0;
+ const assets={bgRoad:'',carBlue:'',carGreen:'',carRed:'',carYellow:'',menuIcon:'',signalImage:'',getI18nText:(key)=>key};
+ const {value:a,tasks}=load('activities/signal.ts','signalActivity',assets);
+ const classes=[];const animations=[];let completed=0;
+ a.context={speech,sfx:{play(){}},notifyTaskComplete(){completed++;}};
+ a.root={clientWidth:1000,replaceChildren(){}};a.carImage={};a.banner={};
+ a.signalButton={getBoundingClientRect:()=>({left:100,top:0,width:100,height:150})};
+ a.carButton={classList:{add(...values){classes.push(...values);},remove(){}},getBoundingClientRect:()=>({left:30}),animate(frames){animations.push(frames);return {cancel(){}};}};
+ assert.doesNotThrow(()=>{a.handleSignalPointerDown({preventDefault(){}});a.handleSignalPointerDown({preventDefault(){}});});
+ assert.equal(spoken.length,0);assert.equal(errors.length,0);
+ assert.equal(a.signalButton.className,'signal-activity__signal is-green');
+ assert.equal(a.banner.className,'signal-activity__banner is-green');
+ assert.equal(a.isDriving,true);assert.ok(classes.includes('is-driving'));
+ assert.equal(animations.length,1);assert.ok(animations[0].at(-1).transform.includes('1090px'));
+ assert.equal(completed,1);assert.equal(tasks.size,1);a.unmount();assert.equal(tasks.size,0);
+});
+
 test('resizing the 3D world updates the camera projection',()=>{
  const {value:prototype}=load('three/world.ts','ThreeWorld.prototype');
  let updates=0;const world=Object.create(prototype);
