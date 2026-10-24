@@ -60,6 +60,120 @@ test('UI reads preserve rotation, including switching modes without speaking', a
   assert.equal(fixture.spoken.at(-1).lang, 'ja-JP');
 });
 
+test('missing Thai voice cancels old speech without constructing or submitting a fallback utterance', async (t) => {
+  const fixture = speechFixture(t, 'ja');
+  fixture.voices.splice(2, 1);
+  const { createSpeechService } = await load('src/core/speech.ts');
+  const speech = createSpeechService(fixture.settings);
+  speech.unlock();
+  speech.speak('car');
+  assert.equal(fixture.spoken.at(-1).lang, 'ja-JP');
+  fixture.settings.langMode = 'th';
+  const submitted = [];
+  let constructed = 0;
+  const OriginalUtterance = globalThis.SpeechSynthesisUtterance;
+  // speechFixture owns restoration of this global; avoid stacking cleanup hooks.
+  globalThis.SpeechSynthesisUtterance = class extends OriginalUtterance {
+    constructor(text) { super(text); constructed++; }
+  };
+  fixture.synthesis.speak = (utterance) => submitted.push(utterance);
+  assert.doesNotThrow(() => speech.speak('go'));
+  assert.equal(submitted.length, 0);
+  assert.equal(constructed, 0);
+  assert.equal(fixture.spoken.length, 0);
+  assert.equal(speech.getLanguage(), 'th');
+});
+
+test('empty or unavailable voice lists silently skip Thai requests', async (t) => {
+  const { createSpeechService } = await load('src/core/speech.ts');
+  for (const mode of ['empty', 'throws']) {
+    await t.test(mode, (t) => {
+      const fixture = speechFixture(t, 'th');
+      fixture.synthesis.getVoices = () => {
+        if (mode === 'throws') throw new Error('synthetic voices unavailable');
+        return [];
+      };
+      const speech = createSpeechService(fixture.settings);
+      speech.unlock();
+      const submitted = [];
+      fixture.synthesis.speak = (utterance) => submitted.push(utterance);
+      assert.doesNotThrow(() => speech.speakDirect('あお！ パトカー、ごー！'));
+      assert.equal(submitted.length, 0);
+    });
+  }
+});
+
+test('a newly available Thai voice serves only a fresh request, not the skipped request', async (t) => {
+  const fixture = speechFixture(t, 'th');
+  fixture.voices.splice(2, 1);
+  let voicesChanged;
+  fixture.synthesis.addEventListener = (type, listener) => {
+    if (type === 'voiceschanged') voicesChanged = listener;
+  };
+  const { createSpeechService } = await load('src/core/speech.ts');
+  const { VOCAB } = await load('src/core/vocab.ts');
+  const speech = createSpeechService(fixture.settings);
+  speech.unlock();
+  const submitted = [];
+  fixture.synthesis.speak = (utterance) => submitted.push(utterance);
+  speech.speak('car');
+  assert.equal(submitted.length, 0);
+  const voice = { lang: ' th_TH ' };
+  fixture.voices.push(voice);
+  voicesChanged();
+  assert.equal(submitted.length, 0);
+  speech.speak('go');
+  assert.equal(submitted.length, 1);
+  assert.equal(submitted[0].voice, voice);
+  assert.equal(submitted[0].text, VOCAB.go.th);
+  assert.equal(submitted[0].lang, 'th-TH');
+});
+
+test('rotation advances past silent Thai without changing the next Japanese request', async (t) => {
+  const fixture = speechFixture(t);
+  fixture.voices.splice(2, 1);
+  const { createSpeechService } = await load('src/core/speech.ts');
+  const speech = createSpeechService(fixture.settings);
+  speech.unlock();
+  const submitted = [];
+  fixture.synthesis.speak = (utterance) => submitted.push(utterance);
+  for (const next of ['ja', 'en', 'th', 'ja']) {
+    assert.equal(speech.getLanguage(), next);
+    assert.equal(speech.getLanguage(), next);
+    speech.speak('go');
+  }
+  assert.deepEqual(submitted.map((utterance) => utterance.lang), ['ja-JP', 'en-US', 'ja-JP']);
+});
+
+test('available Thai voices retain normalized and base-language matching', async (t) => {
+  const fixture = speechFixture(t, 'th');
+  const { createSpeechService } = await load('src/core/speech.ts');
+  const speech = createSpeechService(fixture.settings);
+  speech.unlock();
+  for (const lang of ['th-TH', 'TH_th', 'th']) {
+    const voice = { lang };
+    fixture.voices.splice(0, fixture.voices.length, voice);
+    speech.speak('car');
+    assert.equal(fixture.spoken.length, 1);
+    assert.equal(fixture.spoken[0].voice, voice);
+    assert.equal(fixture.spoken[0].lang, 'th-TH');
+  }
+});
+
+test('Japanese and English keep their existing default-voice behavior', async (t) => {
+  const fixture = speechFixture(t, 'ja');
+  fixture.voices.length = 0;
+  const { createSpeechService } = await load('src/core/speech.ts');
+  const speech = createSpeechService(fixture.settings);
+  speech.unlock();
+  for (const [lang, tag] of [['ja', 'ja-JP'], ['en', 'en-US']]) {
+    fixture.settings.langMode = lang;
+    speech.speak('car');
+    assert.equal(fixture.spoken.length, 1);
+    assert.equal(fixture.spoken[0].lang, tag);
+  }
+});
+
 test('all signal vehicles and existing main phrases retain translated vocabulary', async (t) => {
   const fixture = speechFixture(t, 'en');
   const { createSpeechService, resolvePhraseKey } = await load('src/core/speech.ts');
